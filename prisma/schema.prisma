@@ -1,0 +1,290 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  name               String?
+  email              String    @unique
+  emailVerified      DateTime?
+  image              String?
+  passwordHash       String?
+  role               String    @default("user")
+  subscriptionStatus String    @default("free")
+  isBlocked          Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  lastLoginAt        DateTime?
+
+  accounts      Account[]
+  sessions      Session[]
+  subscription  Subscription?
+  jogos         JogoGerado[]
+  perfis        PerfilGeracao[]
+  auditLogs     AuditLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Subscription {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plano                  String    @default("premium")
+  valor                  Float     @default(4.99)
+  moeda                  String    @default("BRL")
+  periodicidade          String    @default("monthly")
+  status                 String    @default("free")
+  gateway                String?
+  gatewayCustomerId      String?
+  gatewaySubscriptionId  String?
+  gatewayPaymentId       String?
+  dataInicio             DateTime?
+  dataRenovacao          DateTime?
+  dataCancelamento       DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  eventType   String
+  description String
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+}
+
+model Concurso {
+  id                        String   @id @default(cuid())
+  numeroConcurso            Int      @unique
+  dataSorteio               DateTime?
+  d1  Int
+  d2  Int
+  d3  Int
+  d4  Int
+  d5  Int
+  d6  Int
+  d7  Int
+  d8  Int
+  d9  Int
+  d10 Int
+  d11 Int
+  d12 Int
+  d13 Int
+  d14 Int
+  d15 Int
+  soma                      Int
+  pares                     Int
+  impares                   Int
+  primos                    Int
+  fibonacci                 Int
+  moldura                   Int
+  centro                    Int
+  repetidasConcursoAnterior Int      @default(0)
+  ausentes                  Int      @default(0)
+  blocosSorteados           Json?
+  maiorSequenciaSorteada    Int      @default(0)
+  blocosAusentes            Json?
+  maiorSequenciaAusente     Int      @default(0)
+  linhasBalance             Int?
+  colunasBalance            Int?
+  sequencias                Int?
+  grupo1_5                  Int?
+  grupo6_10                 Int?
+  grupo11_15                Int?
+  grupo16_20                Int?
+  grupo21_25                Int?
+  cicloId                   String?
+  observacoes               String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([numeroConcurso])
+}
+
+model DezenaEstatistica {
+  id                     String   @id @default(cuid())
+  dezena                 Int      @unique
+  frequenciaTotal        Int
+  percentualFrequencia   Float
+  rankingFrequencia      Int      @default(0)
+  classificacaoTemperatura String
+  sequenciaAtual         Int      @default(0)
+  sequenciaMedia         Float    @default(0)
+  sequenciaMaxima        Int      @default(0)
+  atrasoAtual            Int      @default(0)
+  atrasoMedio            Float    @default(0)
+  atrasoMaximo           Int      @default(0)
+  statusSequencia        String?
+  statusAtraso           String?
+  ultimoConcursoSaiu     Int?
+  updatedAt              DateTime @updatedAt
+}
+
+model CriterioEstatistico {
+  id                   String   @id @default(cuid())
+  nomeCriterio          String
+  tipoCriterio          String   @default("geral")
+  faixaMinima           Float
+  faixaMaxima           Float
+  faixaIdealMin         Float?
+  faixaIdealMax         Float?
+  alvo                  Float?
+  percentualOcorrencia  Float
+  statusForca           String?
+  acima80Porcento       Boolean  @default(false)
+  pesoPadrao            Float    @default(10)
+  ativoNoGerador        Boolean  @default(true)
+  tipoFaixa             String   @default("ampla")
+  updatedAt             DateTime @updatedAt
+
+  @@unique([nomeCriterio, tipoFaixa])
+}
+
+model BasePareto {
+  id                      String   @id @default(cuid())
+  nomeBase                String   @default("Base")
+  tamanhoBase             Int      @default(18)
+  tipo                    String   @unique
+  dezenas                 Int[]
+  somaBase                Int?
+  paresBase               Int?
+  imparesBase             Int?
+  primosBase              Int?
+  fibonacciBase           Int?
+  molduraBase              Int?
+  centroBase              Int?
+  repetidasUltimoConcurso Int?
+  cobertura11             Float?
+  cobertura12             Float?
+  cobertura13             Float?
+  cobertura14             Float?
+  cobertura15             Float?
+  editavel                Boolean  @default(false)
+  metadata                Json?
+  userId                  String?
+  updatedAt               DateTime @updatedAt
+}
+
+model PerfilGeracao {
+  id              String   @id @default(cuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nomePerfil      String
+  descricao       String?
+  basePadrao      String   @default("20D")
+  criteriosAtivos Json
+  pesos           Json?
+  faixas          Json
+  obrigatorios    Json?
+  isSystem        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model JogoGerado {
+  id                        String   @id @default(cuid())
+  userId                    String?
+  user                      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  nomeLote                  String?
+  origemBase                String
+  dezenas                   Int[]
+  soma                      Int
+  pares                     Int
+  impares                   Int
+  primos                    Int
+  fibonacci                 Int
+  moldura                   Int
+  centro                    Int
+  repetidasUltimoConcurso   Int
+  dezenasRepetidas          Int[]    @default([])
+  dezenasNovas               Int[]    @default([])
+  ausentesDoJogo            Int[]    @default([])
+  blocosSorteados           Json?
+  maiorSequenciaSorteada    Int      @default(0)
+  blocosAusentes           Json?
+  maiorSequenciaAusente     Int      @default(0)
+  dezenasAtrasadasUsadas    Int[]    @default([])
+  dezenasEmSequenciaUsadas  Int[]    @default([])
+  qtdAtrasoGte2             Int      @default(0)
+  qtdAtrasoGte3             Int      @default(0)
+  qtdSeqGte4                Int      @default(0)
+  qtdSeqGte5                Int      @default(0)
+  scoreEstatistico          Float
+  statusValidacao           String
+  perfilUtilizado           String?
+  motivosReprovacao         String[] @default([])
+  detalheScore              Json?
+  observacoes               String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @default(now()) @updatedAt
+  simulacoes                Simulacao[]
+}
+
+model Simulacao {
+  id               String      @id @default(cuid())
+  jogoId           String?
+  jogo             JogoGerado? @relation(fields: [jogoId], references: [id], onDelete: SetNull)
+  dezenasJogo      Int[]
+  concursoTestado  Int
+  acertos          Int
+  dezenasAcertadas Int[]       @default([])
+  dataSimulacao    DateTime    @default(now())
+  loteId           String?
+  createdAt        DateTime    @default(now())
+
+  @@index([loteId])
+  @@index([concursoTestado])
+}
+
+model ConfiguracaoApp {
+  id        String   @id @default(cuid())
+  chave     String   @unique
+  valor     Json
+  updatedAt DateTime @updatedAt
+}

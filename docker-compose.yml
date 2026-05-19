@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lotofacil-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lotofacil
+      POSTGRES_PASSWORD: lotofacil
+      POSTGRES_DB: lotofacil
+    ports:
+      - "5433:5432"
+    volumes:
+      - lotofacil_pg:/var/lib/postgresql/data
+
+volumes:
+  lotofacil_pg:

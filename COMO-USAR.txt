@@ -1,0 +1,32 @@
+═══════════════════════════════════════════════════════════
+  FÁCIL ANALYTICS — COMO ABRIR (3 PASSOS)
+═══════════════════════════════════════════════════════════
+
+Tudo já está configurado para você (wagdeaguiar@gmail.com).
+NÃO precisa configurar Google nem editar arquivos.
+
+PASSO 1 — Ter o Docker Desktop aberto (ícone da baleia)
+         Se não tiver: instale em https://www.docker.com/products/docker-desktop/
+
+PASSO 2 — Na pasta do projeto, clique duas vezes em:
+         INICIAR-FACIL-ANALYTICS.bat
+
+         (Ou no terminal:  npm run iniciar)
+
+PASSO 3 — O navegador abre sozinho.
+         Aguarde alguns segundos — você entra automaticamente no Dashboard.
+
+───────────────────────────────────────────────────────────
+  Endereço do app:  http://localhost:3010
+  Entrada direta:   http://localhost:3010/comecar
+───────────────────────────────────────────────────────────
+
+Se algo der errado:
+  - Feche o terminal e abra de novo o arquivo .bat
+  - Confirme que Docker está rodando
+  - Use o botão grande na página inicial: "Entrar no Fácil Analytics"
+
+Suporte: o app roda só no seu computador (modo local).
+Google login é opcional para o futuro — não é necessário agora.
+
+═══════════════════════════════════════════════════════════
