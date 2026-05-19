@@ -1,0 +1,64 @@
+================================================================================
+  FÁCIL ANALYTICS — PUBLICAR NA INTERNET (modo fácil)
+================================================================================
+
+O código já está no GitHub:
+  https://github.com/wagnerdeaguiar/facil-analytics
+
+Para publicar, use APENAS o arquivo:
+
+  >>> PUBLICAR-FACIL-ANALYTICS.bat <<<
+
+(dê duplo clique na pasta do projeto)
+
+O script abre os sites certos e guia passo a passo.
+Você só precisa: criar conta (se não tiver), colar textos quando pedir,
+e fazer login no Google/Vercel quando o navegador abrir.
+
+--------------------------------------------------------------------------------
+O QUE O SCRIPT FAZ POR VOCÊ
+--------------------------------------------------------------------------------
+  [x] Envia código para o GitHub (se houver alterações)
+  [x] Abre Vercel para importar o projeto
+  [x] Abre Neon para criar banco PostgreSQL grátis
+  [x] Cria tabelas no banco (Prisma)
+  [x] Sincroniza perfis de geração
+  [x] Gera NEXTAUTH_SECRET automaticamente
+  [x] Tenta publicar com Vercel CLI
+
+--------------------------------------------------------------------------------
+O QUE VOCÊ PRECISA FAZER (3 coisas — o script explica na hora)
+--------------------------------------------------------------------------------
+
+1) NEON (banco de dados — grátis)
+   - Criar projeto → copiar "Connection string"
+   - Colar quando o script pedir
+
+2) VERCEL (hospedagem — grátis)
+   - Login com GitHub → importar "facil-analytics"
+   - Colar as variáveis que o script mostrar em Settings → Environment Variables
+
+3) GOOGLE (login dos usuários — obrigatório em produção)
+   - console.cloud.google.com → Credenciais → OAuth
+   - Colar Client ID e Secret no arquivo .env.vercel
+
+Depois do primeiro deploy, importe o histórico Lotofácil:
+   - Entre no site → Configurações → Importar planilha
+   - Ou rode: npm run db:import-xlsx (com DATABASE_URL do Neon)
+
+--------------------------------------------------------------------------------
+LINKS DIRETOS
+--------------------------------------------------------------------------------
+  Repositório:  https://github.com/wagnerdeaguiar/facil-analytics
+  Importar Vercel: https://vercel.com/new/import?s=https://github.com/wagnerdeaguiar/facil-analytics
+  Neon (banco): https://neon.tech
+  Google OAuth: https://console.cloud.google.com/apis/credentials
+
+--------------------------------------------------------------------------------
+AJUDA
+--------------------------------------------------------------------------------
+  Site não abre? Confira NEXTAUTH_URL = URL exata do Vercel (com https)
+  Login falha? Google redirect: https://SEU-SITE.vercel.app/api/auth/callback/google
+  Banco vazio? Importe xlsx em Configurações após entrar no app
+
+================================================================================

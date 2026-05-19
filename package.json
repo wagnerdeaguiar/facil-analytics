@@ -6,7 +6,8 @@
     "dev": "next dev -p 3010",
     "iniciar": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/iniciar.ps1",
     "build": "prisma generate && next build",
-    "start": "next start -p 3010",
+    "start": "next start",
+    "start:local": "next start -p 3010",
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
@@ -16,6 +17,7 @@
     "db:studio": "prisma studio",
     "db:backfill-estrutura": "tsx prisma/backfill-estrutura.ts",
     "db:seed-perfis": "tsx prisma/seed-perfis.ts",
+    "publicar": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/publicar.ps1",
     "postinstall": "prisma generate"
   },
   "dependencies": {
