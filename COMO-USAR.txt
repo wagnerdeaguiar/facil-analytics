@@ -31,4 +31,9 @@ Se algo der errado:
 Suporte: o app roda só no seu computador (modo local).
 Google login é opcional para o futuro — não é necessário agora.
 
+PUBLICAR NA INTERNET (nao e botao no chat — use o arquivo):
+  PUBLICAR-FACIL-ANALYTICS.bat  (assistente + checklist)
+  ABRE-CHECKLIST-PUBLICACAO.bat (so o checklist)
+  Veja tambem: COMO-PUBLICAR.txt e CHECKLIST-PUBLICACAO.md
+
 ═══════════════════════════════════════════════════════════
