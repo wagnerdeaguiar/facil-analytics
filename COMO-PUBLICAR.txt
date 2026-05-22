@@ -5,11 +5,17 @@
 O código já está no GitHub:
   https://github.com/wagnerdeaguiar/facil-analytics
 
-Para publicar, use:
+IMPORTANTE: no chat do Cursor, o texto nao e botao. Use os ARQUIVOS abaixo.
 
-  >>> PUBLICAR-FACIL-ANALYTICS.bat <<<  (duplo clique na pasta do projeto)
+Para publicar, de DUPLO CLIQUE em:
 
-Checklist detalhado (marque cada passo):
+  >>> PUBLICAR-FACIL-ANALYTICS.bat <<<  (na pasta do projeto)
+
+So o checklist (sem assistente):
+
+  >>> ABRE-CHECKLIST-PUBLICACAO.bat <<<
+
+Checklist detalhado (marque cada passo no Cursor/Bloco de notas):
 
   >>> CHECKLIST-PUBLICACAO.md <<<
 

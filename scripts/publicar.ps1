@@ -32,8 +32,11 @@ if ($status) {
     git add -A
     git commit -m "Atualizacao antes do deploy" 2>$null
 }
-git push -u origin main 2>&1
-if ($LASTEXITCODE -eq 0) {
+$ErrorActionPreference = "Continue"
+git push -u origin main 2>&1 | Out-Host
+$pushOk = $LASTEXITCODE -eq 0
+$ErrorActionPreference = "Stop"
+if ($pushOk) {
     Write-Host "      Codigo no GitHub OK" -ForegroundColor Green
 } else {
     Write-Host "      AVISO: push falhou. Continue se o codigo ja estiver no GitHub." -ForegroundColor Red
