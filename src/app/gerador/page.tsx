@@ -267,7 +267,7 @@ export default function GeradorPage() {
           </p>
           <button
             type="button"
-            onClick={gerar}
+            onClick={() => void gerar()}
             disabled={loading}
             className="btn-primary w-full py-3 text-base md:w-auto"
           >
@@ -320,4 +320,3 @@ export default function GeradorPage() {
     </section>
   );
 }
-

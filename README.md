@@ -1,4 +1,4 @@
-# Lotofácil Analytics
+# Fácil Analytics (Lotofácil)
 
 Aplicativo web para **análise estatística**, **geração filtrada**, **bases Pareto** e **simulação retroativa** de jogos da Lotofácil.
 

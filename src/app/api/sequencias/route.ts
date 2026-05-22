@@ -6,12 +6,23 @@ import { analiseCompletaSequenciaAtraso } from '@/lib/lotofacil/sequencia-atraso
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const de = searchParams.get('de') ? Number(searchParams.get('de')) : undefined;
-    const ate = searchParams.get('ate') ? Number(searchParams.get('ate')) : undefined;
+    const deParam = searchParams.get('de');
+    const ateParam = searchParams.get('ate');
+    const usarUltimos10 = !deParam && !ateParam;
 
     let concursos = await getConcursosOrdenados();
-    if (de) concursos = concursos.filter((c) => c.numeroConcurso >= de);
-    if (ate) concursos = concursos.filter((c) => c.numeroConcurso <= ate);
+    if (usarUltimos10) {
+      concursos = concursos.slice(-10);
+    } else {
+      if (deParam) {
+        const de = Number(deParam);
+        concursos = concursos.filter((c) => c.numeroConcurso >= de);
+      }
+      if (ateParam) {
+        const ate = Number(ateParam);
+        concursos = concursos.filter((c) => c.numeroConcurso <= ate);
+      }
+    }
 
     const dezenasList = concursos.map((c) => extrairDezenasConcurso(c));
     const ultimo = concursos[concursos.length - 1];

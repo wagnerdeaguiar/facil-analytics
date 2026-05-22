@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { parseTxtMazuSoft, concursoToDbFields } from '@/lib/lotofacil/import';
 import { recalcularEstatisticasGlobais } from '@/lib/services/analytics';
@@ -8,6 +9,9 @@ import { analisarRepetidasGeral } from '@/lib/lotofacil/sequencia-atraso';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
 
 export async function POST(request: Request) {
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json().catch(() => ({}));
     const substituir = body.substituir !== false;

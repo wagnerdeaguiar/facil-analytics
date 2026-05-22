@@ -7,9 +7,6 @@ const PREMIUM_PATHS = [
   '/exportacao',
   '/configuracoes',
   '/perfis',
-  '/meus-jogos',
-  '/minhas-simulacoes',
-  '/relatorios-completos',
 ];
 
 const AUTH_PATHS = ['/dashboard', '/conta'];
@@ -62,8 +59,5 @@ export const config = {
     '/perfis/:path*',
     '/conta/:path*',
     '/admin/:path*',
-    '/meus-jogos/:path*',
-    '/minhas-simulacoes/:path*',
-    '/relatorios-completos/:path*',
   ],
 };

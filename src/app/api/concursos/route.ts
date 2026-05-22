@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { parseCSVConcursos, parseJSONConcursos, concursoToDbFields } from '@/lib/lotofacil/import';
 import { recalcularEstatisticasGlobais } from '@/lib/services/analytics';
@@ -23,6 +24,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
     const formato = body.formato as 'csv' | 'json';

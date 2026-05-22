@@ -22,8 +22,10 @@ PASSO 3 — O navegador abre sozinho.
 ───────────────────────────────────────────────────────────
 
 Se algo der errado:
-  - Feche o terminal e abra de novo o arquivo .bat
-  - Confirme que Docker está rodando
+  - Feche o terminal (Ctrl+C) e abra de novo INICIAR-FACIL-ANALYTICS.bat
+  - Confirme que Docker está rodando (baleia verde)
+  - Use http://localhost:3010 (não 3000)
+  - Erro "Can't reach database at 5433"? Espere Docker subir e reinicie o .bat
   - Use o botão grande na página inicial: "Entrar no Fácil Analytics"
 
 Suporte: o app roda só no seu computador (modo local).

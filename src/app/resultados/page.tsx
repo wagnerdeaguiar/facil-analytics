@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { DezenasGrid } from '@/components/DezenasGrid';
 import { CadastroConcursoManual } from '@/components/CadastroConcursoManual';
 
@@ -41,7 +41,7 @@ export default function ResultadosPage() {
   const [de, setDe] = useState('');
   const [ate, setAte] = useState('');
 
-  function carregar() {
+  const carregar = useCallback(() => {
     const params = new URLSearchParams();
     if (de) params.set('de', de);
     if (ate) params.set('ate', ate);
@@ -49,11 +49,11 @@ export default function ResultadosPage() {
     fetch(`/api/concursos?${params}`)
       .then((r) => r.json())
       .then((d) => setConcursos(d.concursos ?? []));
-  }
+  }, [de, ate]);
 
   useEffect(() => {
     carregar();
-  }, []);
+  }, [carregar]);
 
   return (
     <section className="space-y-6">

@@ -5,6 +5,10 @@ import {
   CONFIG_PADRAO,
   type ConfigGeracao,
 } from './scoring';
+import {
+  REGRAS_SEQUENCIA_ATRASO_PREMIUM,
+  ajustarRegrasSequenciaParaPool,
+} from './sequencia-atraso';
 
 export type OrigemBase = '15D' | '18D' | '19D' | '20D' | 'Livre';
 
@@ -49,7 +53,6 @@ function combinar15(dezenas: number[]): number[][] {
       result.push([...picked].sort((a, b) => a - b));
       return;
     }
-    if (result.length > 5000) return;
     const need = 15 - picked.length;
     if (n - start < need) return;
     for (let i = start; i < n; i++) {
@@ -96,6 +99,59 @@ export function configFromPerfilPremium(alvoSoma?: number): ConfigGeracao {
   };
 }
 
+export function diagnosticarGeracao(
+  params: Omit<GerarJogosParams, 'quantidade' | 'maxDezenasIguais'>,
+): {
+  candidatosValidos: number;
+  comScoreMinimo: number;
+  scoreMaximo: number;
+  sequenciaAtrasoAtivo: boolean;
+  scoreMinimo: number;
+} {
+  const { origemBase, baseDezenas, ultimoConcurso, config = CONFIG_PADRAO } = params;
+  const pool = poolFromBase(origemBase, baseDezenas);
+  const usarCombinatorio =
+    (origemBase === '18D' && pool.length === 18) ||
+    (origemBase === '19D' && pool.length === 19) ||
+    (origemBase === '20D' && pool.length === 20);
+
+  let candidatosValidos = 0;
+  let comScoreMinimo = 0;
+  let scoreMaximo = 0;
+  const minScore = config.scoreMinimo ?? 0;
+
+  const avaliar = (dezenas: number[]) => {
+    const m = calcularMetricas(dezenas, ultimoConcurso, baseDezenas ?? pool);
+    const av = avaliarJogo(m, config);
+    if (!av.valido) return;
+    candidatosValidos++;
+    if (av.score > scoreMaximo) scoreMaximo = av.score;
+    if (av.score >= minScore) comScoreMinimo++;
+  };
+
+  if (usarCombinatorio) {
+    for (const dezenas of combinar15(pool)) avaliar(dezenas);
+  } else {
+    const amostras = Math.min(8000, 50000);
+    const vistos = new Set<string>();
+    for (let i = 0; i < amostras; i++) {
+      const dezenas = escolher15Aleatorio(pool);
+      const key = dezenas.join(',');
+      if (vistos.has(key)) continue;
+      vistos.add(key);
+      avaliar(dezenas);
+    }
+  }
+
+  return {
+    candidatosValidos,
+    comScoreMinimo,
+    scoreMaximo,
+    sequenciaAtrasoAtivo: config.usarSequenciaAtraso ?? false,
+    scoreMinimo: minScore,
+  };
+}
+
 export function gerarJogos(params: GerarJogosParams): JogoGeradoResult[] {
   const {
     quantidade,
@@ -109,6 +165,22 @@ export function gerarJogos(params: GerarJogosParams): JogoGeradoResult[] {
   } = params;
 
   const pool = poolFromBase(origemBase, baseDezenas);
+  let configEfetiva = config;
+  if (
+    config.usarSequenciaAtraso &&
+    config.mapaSequenciaAtraso &&
+    config.mapaSequenciaAtraso.size > 0
+  ) {
+    const regrasBase = {
+      ...REGRAS_SEQUENCIA_ATRASO_PREMIUM,
+      ...config.regrasSequenciaAtraso,
+    };
+    configEfetiva = {
+      ...config,
+      regrasSequenciaAtraso: ajustarRegrasSequenciaParaPool(pool, config.mapaSequenciaAtraso, regrasBase),
+    };
+  }
+
   const candidatos: JogoGeradoResult[] = [];
   const vistos = new Set<string>();
 
@@ -121,7 +193,7 @@ export function gerarJogos(params: GerarJogosParams): JogoGeradoResult[] {
     const combos = combinar15(pool);
     for (const dezenas of combos) {
       const m = calcularMetricas(dezenas, ultimoConcurso, baseDezenas ?? pool);
-      const av = avaliarJogo(m, config);
+      const av = avaliarJogo(m, configEfetiva);
       if (!av.valido) continue;
       const key = dezenas.join(',');
       if (vistos.has(key)) continue;
@@ -153,7 +225,7 @@ export function gerarJogos(params: GerarJogosParams): JogoGeradoResult[] {
       vistos.add(key);
 
       const m = calcularMetricas(dezenas, ultimoConcurso, baseDezenas ?? pool);
-      const av = avaliarJogo(m, config);
+      const av = avaliarJogo(m, configEfetiva);
       if (!av.valido) continue;
 
       candidatos.push({

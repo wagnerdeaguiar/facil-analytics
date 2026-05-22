@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { concursoToDbFields } from '@/lib/lotofacil/import';
 import { recalcularEstatisticasGlobais } from '@/lib/services/analytics';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
 
 export async function POST(request: Request) {
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
     const numeroConcurso = Number(body.numeroConcurso);

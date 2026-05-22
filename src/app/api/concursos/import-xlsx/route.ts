@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { concursoToDbFields } from '@/lib/lotofacil/import';
 import { parseXlsxLotofacil, resumoXlsx } from '@/lib/lotofacil/import-xlsx';
@@ -10,6 +11,9 @@ import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
 const DEFAULT_PATH = 'C:\\Users\\KAPAM\\Downloads\\Lotofácil.xlsx';
 
 export async function POST(request: Request) {
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json().catch(() => ({}));
     const substituir = body.substituir !== false;

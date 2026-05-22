@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { getConcursosOrdenados } from '@/lib/services/analytics';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
@@ -9,9 +10,23 @@ import {
   montarBasesPareto,
 } from '@/lib/lotofacil/pareto';
 
+const emptyPayload = (mensagem?: string) => ({
+  ranking: [] as ReturnType<typeof calcularFrequencias>,
+  bases: [] as { tipo: string; dezenas: number[]; estatisticas: ReturnType<typeof estatisticasBase> }[],
+  cobertura: [] as ReturnType<typeof coberturaHistoricaBases>,
+  ultimoConcurso: null as { numero: number; dezenas: number[] | null } | null,
+  mensagem,
+});
+
 export async function GET() {
   try {
     const concursos = await getConcursosOrdenados();
+    if (!concursos.length) {
+      return NextResponse.json(
+        emptyPayload('Nenhum concurso importado. Vá em Configurações para importar o histórico.'),
+      );
+    }
+
     const dezenasList = concursos.map((c) => extrairDezenasConcurso(c));
     const freqs = calcularFrequencias(dezenasList);
     const { base18, base19, base20, ranking } = montarBasesPareto(freqs);
@@ -50,11 +65,17 @@ export async function GET() {
     });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: 'Erro' }, { status: 500 });
+    return NextResponse.json(
+      { ...emptyPayload(), error: 'Erro ao carregar bases Pareto' },
+      { status: 500 },
+    );
   }
 }
 
 export async function PUT(request: Request) {
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
     const { tipo, dezenas } = body as { tipo: string; dezenas: number[] };

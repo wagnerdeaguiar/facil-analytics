@@ -22,9 +22,15 @@ export default function ConfiguracoesPage() {
 
   async function atualizarCaixa() {
     setLoading(true);
-    const res = await fetch('/api/concursos/atualizar', { method: 'POST' });
+    sessionStorage.removeItem('lotofacil-sync-at');
+    const res = await fetch('/api/concursos/sync', { method: 'POST' });
     const data = await res.json();
-    setMsg(data.message ?? `Inseridos: ${data.inseridos}`);
+    setMsg(
+      data.message ??
+        (data.inseridos
+          ? `Inseridos: ${data.inseridos} (${data.fonte ?? 'api'})`
+          : 'Nenhum concurso novo.'),
+    );
     setLoading(false);
   }
 
@@ -146,8 +152,20 @@ export default function ConfiguracoesPage() {
       </article>
 
       <article className="card space-y-3">
-        <h2 className="text-sm font-semibold">Atualizar via API Caixa</h2>
-        <p className="text-xs text-slate-400">Busca o último resultado publicado (quando disponível).</p>
+        <h2 className="text-sm font-semibold">Atualizar último concurso (API)</h2>
+        <p className="text-xs text-slate-400">
+          Sincroniza automaticamente ao abrir o app (a partir do último concurso na base). Aqui
+          força atualização via{' '}
+          <a
+            href="https://github.com/guto-alves/loterias-api"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-400 underline"
+          >
+            Loterias API
+          </a>
+          .
+        </p>
         <button type="button" onClick={atualizarCaixa} disabled={loading} className="btn-secondary">
           Atualizar último concurso
         </button>

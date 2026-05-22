@@ -1,4 +1,5 @@
 import { metricasParaConcurso } from './metrics';
+import { fetchNovosConcursosLoteriasApi, fetchUltimoLoteriasApi } from './loterias-api';
 
 export interface ConcursoImportado {
   numeroConcurso: number;
@@ -150,6 +151,31 @@ export function concursoToDbFields(
     blocosAusentes: m.blocosAusentes ?? [],
     maiorSequenciaAusente: m.maiorSequenciaAusente,
   };
+}
+
+/**
+ * Atualização do último resultado: tenta loterias-api (Heroku) e depois API Caixa.
+ * @see https://github.com/guto-alves/loterias-api
+ */
+export async function fetchConcursosParaAtualizar(
+  ultimoNoBanco: number,
+): Promise<{ concursos: ConcursoImportado[]; fonte: string }> {
+  const novos = await fetchNovosConcursosLoteriasApi(ultimoNoBanco);
+  if (novos.length) {
+    return { concursos: novos, fonte: 'loterias-api' };
+  }
+
+  const ultimo = await fetchUltimoLoteriasApi();
+  if (ultimo && ultimo.numeroConcurso > ultimoNoBanco) {
+    return { concursos: [ultimo], fonte: 'loterias-api' };
+  }
+
+  const caixa = await fetchConcursosCaixa();
+  if (caixa.length) {
+    return { concursos: caixa.filter((c) => c.numeroConcurso > ultimoNoBanco), fonte: 'caixa' };
+  }
+
+  return { concursos: [], fonte: 'nenhuma' };
 }
 
 /** Formato simplificado Caixa-like */

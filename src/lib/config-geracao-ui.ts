@@ -126,15 +126,28 @@ export function uiToRegrasSequencia(ui: ConfigGeracaoUI) {
 
 const STORAGE_KEY = 'lotofacil-config-ui';
 
+function isConfigGeracaoUI(value: unknown): value is ConfigGeracaoUI {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'criterios' in value &&
+    Array.isArray((value as ConfigGeracaoUI).criterios) &&
+    typeof (value as ConfigGeracaoUI).scoreMinimo === 'number'
+  );
+}
+
 export function salvarConfigLocal(ui: ConfigGeracaoUI) {
-  if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(ui));
+  if (typeof window === 'undefined' || !isConfigGeracaoUI(ui)) return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(ui));
 }
 
 export function carregarConfigLocal(): ConfigGeracaoUI | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ConfigGeracaoUI) : null;
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('lotofacil-config-ui-v2');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    return isConfigGeracaoUI(parsed) ? parsed : null;
   } catch {
     return null;
   }

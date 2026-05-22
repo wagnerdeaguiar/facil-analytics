@@ -76,11 +76,47 @@ export const REGRAS_SEQUENCIA_ATRASO_PREMIUM = {
   maxDezenasSequenciaGte4: 4,
   minDezenasAtrasoGte2: 2,
   maxDezenasAtrasoGte2: 4,
+  /** Mínimo ideal; se a base atual não tiver dezenas com atraso ≥3, o gerador ajusta para 0 */
   minDezenasAtrasoGte3: 1,
   maxDezenasAtrasoGte3: 2,
   scoreSequenciaSaudavel: 10,
   scoreAtrasoEquilibrado: 10,
 } as const;
+
+export type RegrasSequenciaAtrasoConfig = {
+  repetidas: (typeof FAIXAS_REPETIDAS_REFERENCIA)['premium'];
+  maxDezenasSequenciaGte6: number;
+  maxDezenasSequenciaGte5: number;
+  maxDezenasSequenciaGte4: number;
+  minDezenasAtrasoGte2: number;
+  maxDezenasAtrasoGte2: number;
+  minDezenasAtrasoGte3: number;
+  maxDezenasAtrasoGte3: number;
+  scoreSequenciaSaudavel: number;
+  scoreAtrasoEquilibrado: number;
+};
+
+/** Evita regra impossível quando a base Pareto só tem dezenas “quentes” (sem atraso ≥3). */
+export function ajustarRegrasSequenciaParaPool(
+  pool: number[],
+  mapa: Map<number, DezenaSequenciaAtraso>,
+  regras: RegrasSequenciaAtrasoConfig = { ...REGRAS_SEQUENCIA_ATRASO_PREMIUM },
+): RegrasSequenciaAtrasoConfig {
+  let noPoolGte2 = 0;
+  let noPoolGte3 = 0;
+  for (const d of pool) {
+    const a = mapa.get(d)?.atrasoAtual ?? 0;
+    if (a >= 2) noPoolGte2++;
+    if (a >= 3) noPoolGte3++;
+  }
+  const maxGte2 = Math.min(15, noPoolGte2);
+  const maxGte3 = Math.min(15, noPoolGte3);
+  return {
+    ...regras,
+    minDezenasAtrasoGte2: Math.min(regras.minDezenasAtrasoGte2, maxGte2),
+    minDezenasAtrasoGte3: Math.min(regras.minDezenasAtrasoGte3, maxGte3),
+  };
+}
 
 function statusSequencia(seq: number): StatusSequencia {
   if (seq >= 6) return 'muito_esticada';
@@ -398,7 +434,7 @@ export function contarSequenciaAtrasoNoJogo(
 
 export function validarRegrasSequenciaAtraso(
   contagem: ContagemSequenciaAtrasoJogo,
-  regras = REGRAS_SEQUENCIA_ATRASO_PREMIUM,
+  regras: RegrasSequenciaAtrasoConfig = { ...REGRAS_SEQUENCIA_ATRASO_PREMIUM },
 ): { valido: boolean; motivos: string[] } {
   const motivos: string[] = [];
 
@@ -443,7 +479,7 @@ export function validarRegrasSequenciaAtraso(
 
 export function pontuarSequenciaAtrasoJogo(
   contagem: ContagemSequenciaAtrasoJogo,
-  regras = REGRAS_SEQUENCIA_ATRASO_PREMIUM,
+  regras: RegrasSequenciaAtrasoConfig = { ...REGRAS_SEQUENCIA_ATRASO_PREMIUM },
 ): { pontos: number; detalhe: Record<string, number> } {
   const detalhe: Record<string, number> = {};
   let pontos = 0;

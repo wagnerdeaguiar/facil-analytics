@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requirePremium } from '@/lib/api-auth';
 import { parseDezenasLine } from '@/lib/lotofacil/import';
 import { simularJogos } from '@/lib/lotofacil/simulator';
 import { analisarCriteriosJogosVencedores } from '@/lib/lotofacil/simulador-criterios';
@@ -7,6 +8,9 @@ import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
 import { prisma } from '@/lib/db';
 
 export async function POST(request: Request) {
+  const auth = await requirePremium();
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
     const concursoInicio = body.concursoInicio ? Number(body.concursoInicio) : undefined;

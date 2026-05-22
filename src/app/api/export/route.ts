@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { requirePremium } from '@/lib/api-auth';
 import { enrichJogosParaExport, jogosToCSV, jogosToXLSXBuffer, jogosToPDFBuffer } from '@/lib/export';
 import { prisma } from '@/lib/db';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
 
 export async function POST(request: Request) {
+  const auth = await requirePremium();
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
     const formato = (body.formato || 'csv') as 'csv' | 'xlsx' | 'pdf';

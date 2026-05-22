@@ -1,9 +1,16 @@
 import { readFileSync } from 'fs';
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api-auth';
 import { parseTxtMazuSoft } from '@/lib/lotofacil/import';
 
 /** Lê arquivo externo (caminho absoluto) — apenas em desenvolvimento local */
 export async function POST(request: Request) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Rota disponível apenas em desenvolvimento.' }, { status: 403 });
+  }
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
+
   try {
     const body = await request.json();
     const caminho = body.caminho as string | undefined;

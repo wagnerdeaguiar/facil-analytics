@@ -3,7 +3,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isPremiumStatus } from '@/lib/subscription';
 import { prisma } from '@/lib/db';
-import { gerarJogos, configFromPerfilPremium, type OrigemBase } from '@/lib/lotofacil/generator';
+import {
+  gerarJogos,
+  diagnosticarGeracao,
+  configFromPerfilPremium,
+  type OrigemBase,
+} from '@/lib/lotofacil/generator';
 import { CONFIG_PADRAO, type ConfigGeracao } from '@/lib/lotofacil/scoring';
 import { getPerfilConfig, type PerfilId } from '@/lib/lotofacil/perfis';
 import { calcularMetricas } from '@/lib/lotofacil/metrics';
@@ -15,6 +20,7 @@ import {
   mapaDezenas,
   analisarRepetidasGeral,
   REGRAS_SEQUENCIA_ATRASO_PREMIUM,
+  ajustarRegrasSequenciaParaPool,
 } from '@/lib/lotofacil/sequencia-atraso';
 
 export async function POST(request: Request) {
@@ -59,18 +65,25 @@ export async function POST(request: Request) {
       config = configFromPerfilPremium(stats?.mediaSoma);
     }
 
-    if (body.regrasSequenciaAtraso) {
-      config.regrasSequenciaAtraso = {
-        ...REGRAS_SEQUENCIA_ATRASO_PREMIUM,
-        ...body.regrasSequenciaAtraso,
-      };
-    }
-
     const dezenasList = concursos.map((c) => extrairDezenasConcurso(c));
     const analiseSeq = analisarSequenciaAtrasoPorDezena(dezenasList);
+    const mapaSeq = mapaDezenas(analiseSeq);
+    const poolGeracao =
+      baseDezenas ??
+      (origemBase === 'Livre' ? Array.from({ length: 25 }, (_, i) => i + 1) : undefined);
+    const regrasSeq = ajustarRegrasSequenciaParaPool(
+      poolGeracao ?? Array.from({ length: 25 }, (_, i) => i + 1),
+      mapaSeq,
+      {
+        ...REGRAS_SEQUENCIA_ATRASO_PREMIUM,
+        ...config.regrasSequenciaAtraso,
+        ...(body.regrasSequenciaAtraso ?? {}),
+      },
+    );
     config = {
       ...config,
-      mapaSequenciaAtraso: mapaDezenas(analiseSeq),
+      mapaSequenciaAtraso: mapaSeq,
+      regrasSequenciaAtraso: regrasSeq,
       usarSequenciaAtraso: body.usarSequenciaAtraso !== false,
     };
 
@@ -124,10 +137,21 @@ export async function POST(request: Request) {
 
     const repetidasGeral = analisarRepetidasGeral(dezenasList);
 
+    let diagnostico: ReturnType<typeof diagnosticarGeracao> | undefined;
+    if (!jogos.length) {
+      diagnostico = diagnosticarGeracao({
+        origemBase,
+        baseDezenas,
+        ultimoConcurso: ultimoDezenas,
+        config,
+      });
+    }
+
     return NextResponse.json({
       jogos,
       ultimoConcurso: ultimo?.numeroConcurso,
       configUsada: config,
+      diagnostico,
       repetidasGeral: {
         media: repetidasGeral.media,
         mediana: repetidasGeral.mediana,

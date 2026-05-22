@@ -6,6 +6,7 @@ import {
   validarRegrasSequenciaAtraso,
   type DezenaSequenciaAtraso,
   REGRAS_SEQUENCIA_ATRASO_PREMIUM,
+  type RegrasSequenciaAtrasoConfig,
 } from './sequencia-atraso';
 
 export interface CriterioFiltro {
@@ -32,7 +33,7 @@ export interface ConfigGeracao {
   pareto?: { minQuentes?: number; baseSize?: number };
   scoreMinimo?: number;
   mapaSequenciaAtraso?: Map<number, DezenaSequenciaAtraso>;
-  regrasSequenciaAtraso?: typeof REGRAS_SEQUENCIA_ATRASO_PREMIUM;
+  regrasSequenciaAtraso?: RegrasSequenciaAtrasoConfig;
   usarSequenciaAtraso?: boolean;
 }
 

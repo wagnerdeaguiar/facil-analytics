@@ -5,11 +5,13 @@
 O código já está no GitHub:
   https://github.com/wagnerdeaguiar/facil-analytics
 
-Para publicar, use APENAS o arquivo:
+Para publicar, use:
 
-  >>> PUBLICAR-FACIL-ANALYTICS.bat <<<
+  >>> PUBLICAR-FACIL-ANALYTICS.bat <<<  (duplo clique na pasta do projeto)
 
-(dê duplo clique na pasta do projeto)
+Checklist detalhado (marque cada passo):
+
+  >>> CHECKLIST-PUBLICACAO.md <<<
 
 O script abre os sites certos e guia passo a passo.
 Você só precisa: criar conta (se não tiver), colar textos quando pedir,

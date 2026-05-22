@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface DezenaRow {
   dezena: number;
@@ -31,20 +31,37 @@ export default function SequenciasPage() {
       probVoltarAtraso: { estado: number; casos: number; percentual: number }[];
     };
   } | null>(null);
-  const [de, setDe] = useState('3442');
-  const [ate, setAte] = useState('3542');
+  const [de, setDe] = useState('');
+  const [ate, setAte] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  function carregar() {
+  const carregar = useCallback((deInicio?: string, ateFim?: string) => {
+    const deVal = deInicio ?? de;
+    const ateVal = ateFim ?? ate;
     const params = new URLSearchParams();
-    if (de) params.set('de', de);
-    if (ate) params.set('ate', ate);
+    if (deVal) params.set('de', deVal);
+    if (ateVal) params.set('ate', ateVal);
+    setLoading(true);
     fetch(`/api/sequencias?${params}`)
       .then((r) => r.json())
-      .then(setData);
-  }
+      .then((json) => {
+        setData(json);
+        if (json.periodo?.de != null) setDe(String(json.periodo.de));
+        if (json.periodo?.ate != null) setAte(String(json.periodo.ate));
+      })
+      .finally(() => setLoading(false));
+  }, [de, ate]);
 
   useEffect(() => {
-    carregar();
+    setLoading(true);
+    fetch('/api/sequencias')
+      .then((r) => r.json())
+      .then((json) => {
+        setData(json);
+        if (json.periodo?.de != null) setDe(String(json.periodo.de));
+        if (json.periodo?.ate != null) setAte(String(json.periodo.ate));
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const statusSeqLabel: Record<string, string> = {
@@ -88,13 +105,18 @@ export default function SequenciasPage() {
           onChange={(e) => setAte(e.target.value)}
           className="input max-w-[160px]"
         />
-        <button type="button" onClick={carregar} className="btn-primary">
+        <button type="button" onClick={() => carregar()} className="btn-primary">
           Recalcular período
         </button>
+        <span className="self-center text-xs text-slate-500">
+          Padrão: últimos 10 concursos da base
+        </span>
       </article>
 
-      {!data ? (
+      {loading && !data ? (
         <p className="text-slate-400">Carregando análise…</p>
+      ) : !data ? (
+        <p className="text-slate-400">Nenhum dado para o período informado.</p>
       ) : (
         <>
           <article className="card">
