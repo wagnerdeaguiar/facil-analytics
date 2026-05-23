@@ -5,6 +5,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/db';
 import { getDevAuthEmail, isDevAuthEnabled, isGoogleAuthConfigured } from '@/lib/auth-config';
 import { getPlanoBySlug } from '@/lib/billing/plan-service';
+import { normalizeEmail, verifyPassword } from '@/lib/password';
 
 const adminEmails = (process.env.ADMIN_EMAIL ?? '')
   .split(',')
@@ -91,6 +92,40 @@ function buildProviders(): NonNullable<NextAuthOptions['providers']> {
     );
   }
 
+  if (!isDevAuthEnabled()) {
+    providers.push(
+      CredentialsProvider({
+        id: 'credentials',
+        name: 'E-mail e senha',
+        credentials: {
+          email: { label: 'E-mail', type: 'email' },
+          password: { label: 'Senha', type: 'password' },
+        },
+        async authorize(credentials) {
+          const email = normalizeEmail(credentials?.email ?? '');
+          const password = credentials?.password ?? '';
+          if (!email || !password) return null;
+
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user?.passwordHash || user.isBlocked) return null;
+
+          const valid = await verifyPassword(password, user.passwordHash);
+          if (!valid) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+            subscriptionStatus: user.subscriptionStatus,
+            isBlocked: user.isBlocked,
+          };
+        },
+      }),
+    );
+  }
+
   return providers;
 }
 
@@ -122,6 +157,11 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (account?.provider === 'dev') {
         if (!isDevAuthEnabled()) return false;
+        return true;
+      }
+
+      if (account?.provider === 'credentials') {
+        if (user.isBlocked) return false;
         return true;
       }
 
@@ -166,7 +206,11 @@ export const authOptions: NextAuthOptions = {
           userId: user.id,
           eventType: 'login',
           description:
-            account?.provider === 'dev' ? 'Login modo desenvolvimento' : 'Login realizado via Google',
+            account?.provider === 'dev'
+              ? 'Login modo desenvolvimento'
+              : account?.provider === 'credentials'
+                ? 'Login com e-mail e senha'
+                : 'Login realizado via Google',
         },
       });
     },
@@ -194,8 +238,8 @@ export const authOptions: NextAuthOptions = {
     },
   },
   session: {
-    // Credentials (modo dev) exige JWT; Google funciona com adapter em ambos
-    strategy: isDevAuthEnabled() ? 'jwt' : 'database',
+    // JWT necessário para login com e-mail/senha (Credentials) e modo dev
+    strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,

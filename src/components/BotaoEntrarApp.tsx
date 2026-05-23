@@ -11,9 +11,11 @@ type Props = {
   grande?: boolean;
   /** Quando omitido, detecta via /api/health (devAuth). */
   devAuth?: boolean;
+  /** Em produção, abre /entrar em vez de Google direto. */
+  irParaEntrar?: boolean;
 };
 
-export function BotaoEntrarApp({ className = 'btn-primary', children, grande, devAuth }: Props) {
+export function BotaoEntrarApp({ className = 'btn-primary', children, grande, devAuth, irParaEntrar }: Props) {
   const router = useRouter();
   const { status } = useSession();
   const [loading, setLoading] = useState(false);
@@ -84,8 +86,15 @@ export function BotaoEntrarApp({ className = 'btn-primary', children, grande, de
   }
 
   async function entrar() {
-    if (isDev) await entrarDev();
-    else await entrarGoogle();
+    if (isDev) {
+      await entrarDev();
+      return;
+    }
+    if (irParaEntrar) {
+      router.push('/entrar');
+      return;
+    }
+    await entrarGoogle();
   }
 
   const labelPadrao = isDev ? `Entrar no ${SITE_NAME}` : 'Entrar com Google';

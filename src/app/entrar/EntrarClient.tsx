@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Disclaimer } from '@/components/Disclaimer';
 import { BotaoEntrarApp } from '@/components/BotaoEntrarApp';
+import { FormularioEmailSenha } from '@/components/FormularioEmailSenha';
 import { SITE_NAME } from '@/lib/site-identity';
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
@@ -45,16 +46,17 @@ export function EntrarClient({ devAuth }: Props) {
   }, [devAuth]);
 
   return (
-    <div className="mx-auto max-w-md space-y-8 px-4 py-16 text-center">
-      <h1 className="text-2xl font-bold text-white">Entrar</h1>
+    <div className="mx-auto max-w-md space-y-8 px-4 py-16">
+      <h1 className="text-center text-2xl font-bold text-white">Entrar</h1>
       {aviso && (
         <p className="rounded-lg border border-amber-600/50 bg-amber-950/40 px-3 py-2 text-left text-sm text-amber-200">
           {aviso}
         </p>
       )}
       <Disclaimer />
+
       {devAuth ? (
-        <>
+        <div className="space-y-6 text-center">
           <p className="text-slate-400">Um clique — sem Google, sem senha (modo desenvolvimento).</p>
           <BotaoEntrarApp className="btn-primary w-full py-4 text-lg" grande devAuth>
             Entrar no {SITE_NAME}
@@ -62,21 +64,38 @@ export function EntrarClient({ devAuth }: Props) {
           <Link href="/comecar" className="block text-sm text-brand-400 hover:underline">
             Ou abrir entrada automática
           </Link>
-        </>
+        </div>
       ) : (
-        <>
-          <p className="text-slate-400">
-            Use sua conta Google para acessar o {SITE_NAME}. Seus dados ficam vinculados ao e-mail da conta.
+        <div className="space-y-6">
+          <p className="text-center text-slate-400">
+            Entre com Google ou com o e-mail e senha cadastrados no {SITE_NAME}.
           </p>
-          <BotaoEntrarApp className="btn-primary w-full py-4 text-lg" grande devAuth={false}>
+
+          <BotaoEntrarApp className="btn-primary w-full py-3 text-base" devAuth={false}>
             Entrar com Google
           </BotaoEntrarApp>
-          <Link href="/precos" className="block text-sm text-brand-400 hover:underline">
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-800" />
+            <span className="text-xs uppercase tracking-wider text-slate-500">ou</span>
+            <div className="h-px flex-1 bg-slate-800" />
+          </div>
+
+          <FormularioEmailSenha modo="entrar" />
+
+          <p className="text-center text-sm text-slate-400">
+            Ainda não tem conta?{' '}
+            <Link href="/cadastro" className="text-brand-400 hover:underline">
+              Cadastre-se
+            </Link>
+          </p>
+          <Link href="/precos" className="block text-center text-sm text-brand-400 hover:underline">
             Ver planos e preços
           </Link>
-        </>
+        </div>
       )}
-      <Link href="/" className="block text-sm text-slate-500 hover:text-white">
+
+      <Link href="/" className="block text-center text-sm text-slate-500 hover:text-white">
         Voltar
       </Link>
     </div>

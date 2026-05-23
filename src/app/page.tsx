@@ -21,7 +21,7 @@ export default function LandingPage() {
             <p className="text-xs text-slate-400">{SITE_TAGLINE}</p>
           </div>
           <nav className="flex items-center gap-3">
-            <BotaoEntrarApp className="btn-primary text-sm" grande devAuth={devAuth}>
+            <BotaoEntrarApp className="btn-primary text-sm" grande devAuth={devAuth} irParaEntrar={!devAuth}>
               Entrar
             </BotaoEntrarApp>
           </nav>
@@ -37,16 +37,22 @@ export default function LandingPage() {
           <p className="mx-auto max-w-2xl text-lg text-slate-300">
             {devAuth
               ? 'Clique no botão abaixo para abrir o app. Tudo já está configurado no seu computador — sem Google, sem cadastro complicado.'
-              : `Entre com Google para usar gerador, simulações e planos Premium. Análise transparente, sem promessas de ganho.`}
+              : `Entre com Google ou crie sua conta com e-mail e senha. Gerador, simulações e planos Premium.`}
           </p>
           <div className="flex flex-col items-center gap-3">
             <BotaoEntrarApp
               className="btn-primary px-10 py-4 text-lg font-semibold shadow-lg shadow-brand-900/40"
               grande
               devAuth={devAuth}
+              irParaEntrar={!devAuth}
             >
-              {devAuth ? `Abrir ${SITE_NAME}` : 'Entrar com Google'}
+              {devAuth ? `Abrir ${SITE_NAME}` : 'Entrar ou criar conta'}
             </BotaoEntrarApp>
+            {!devAuth && (
+              <Link href="/cadastro" className="text-sm text-brand-400 hover:underline">
+                Criar conta com e-mail
+              </Link>
+            )}
             {devAuth && (
               <p className="text-xs text-slate-500">
                 Ou dê dois cliques em{' '}
