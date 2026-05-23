@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { getConcursosOrdenados } from '@/lib/services/analytics';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';

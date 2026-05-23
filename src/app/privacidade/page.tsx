@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getSiteResponsavel, formatarCpf, formatarTelefoneBr } from '@/lib/site-config';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PrivacidadePage() {
   const responsavel = await getSiteResponsavel();
 

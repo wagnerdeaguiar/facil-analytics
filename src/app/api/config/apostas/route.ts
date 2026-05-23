@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { getTabelaAposta, TABELA_APOSTA_PADRAO } from '@/lib/lotofacil/aposta-config';
 

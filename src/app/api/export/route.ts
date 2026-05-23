@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { requirePremium, requireSession } from '@/lib/api-auth';
 import { enrichJogosParaExport, jogosToCSV, jogosToXLSXBuffer, jogosToPDFBuffer } from '@/lib/export';

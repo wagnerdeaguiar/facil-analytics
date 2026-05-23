@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { requirePremium } from '@/lib/api-auth';
 import { recalcularEstatisticasGlobais } from '@/lib/services/analytics';

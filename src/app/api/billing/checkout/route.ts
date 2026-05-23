@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/api-auth';
 import { createBillingCheckout } from '@/lib/billing/checkout';

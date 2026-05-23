@@ -3,10 +3,15 @@ import { PlanosSection } from '@/components/PlanosSection';
 import Link from 'next/link';
 import { Disclaimer } from '@/components/Disclaimer';
 import { BotaoEntrarApp } from '@/components/BotaoEntrarApp';
+import { isDevAuthEnabled } from '@/lib/auth-config';
 import { SITE_EMAIL, SITE_NAME, SITE_TAGLINE } from '@/lib/site-identity';
 import { BarChart3, Shield, Sparkles, Target } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default function LandingPage() {
+  const devAuth = isDevAuthEnabled();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
       <header className="border-b border-slate-800/80 px-4 py-4">
@@ -16,7 +21,7 @@ export default function LandingPage() {
             <p className="text-xs text-slate-400">{SITE_TAGLINE}</p>
           </div>
           <nav className="flex items-center gap-3">
-            <BotaoEntrarApp className="btn-primary text-sm" grande>
+            <BotaoEntrarApp className="btn-primary text-sm" grande devAuth={devAuth}>
               Entrar
             </BotaoEntrarApp>
           </nav>
@@ -30,16 +35,24 @@ export default function LandingPage() {
             Análise estatística transparente para a Lotofácil
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-slate-300">
-            Clique no botão abaixo para abrir o app. Tudo já está configurado no seu computador — sem Google,
-            sem cadastro complicado.
+            {devAuth
+              ? 'Clique no botão abaixo para abrir o app. Tudo já está configurado no seu computador — sem Google, sem cadastro complicado.'
+              : `Entre com Google para usar gerador, simulações e planos Premium. Análise transparente, sem promessas de ganho.`}
           </p>
           <div className="flex flex-col items-center gap-3">
-            <BotaoEntrarApp className="btn-primary px-10 py-4 text-lg font-semibold shadow-lg shadow-brand-900/40" grande>
-              Abrir {SITE_NAME}
+            <BotaoEntrarApp
+              className="btn-primary px-10 py-4 text-lg font-semibold shadow-lg shadow-brand-900/40"
+              grande
+              devAuth={devAuth}
+            >
+              {devAuth ? `Abrir ${SITE_NAME}` : 'Entrar com Google'}
             </BotaoEntrarApp>
-            <p className="text-xs text-slate-500">
-              Ou dê dois cliques em <strong className="text-slate-400">INICIAR-FACIL-ANALYTICS.bat</strong> na pasta do projeto
-            </p>
+            {devAuth && (
+              <p className="text-xs text-slate-500">
+                Ou dê dois cliques em{' '}
+                <strong className="text-slate-400">INICIAR-FACIL-ANALYTICS.bat</strong> na pasta do projeto
+              </p>
+            )}
           </div>
         </section>
 

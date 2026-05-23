@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { requirePremium } from '@/lib/api-auth';
 import { caminhoLotofacilXlsx } from '@/lib/lotofacil/excel-path';

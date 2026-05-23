@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { isNumerosPorAposta } from '@/lib/lotofacil/aposta';
 import { requireSession } from '@/lib/api-auth';

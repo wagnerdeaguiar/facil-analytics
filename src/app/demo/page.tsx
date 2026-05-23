@@ -5,6 +5,8 @@ import { calcularFrequencias } from '@/lib/lotofacil/pareto';
 import { DezenasGrid } from '@/components/DezenasGrid';
 import { Disclaimer } from '@/components/Disclaimer';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DemoPage() {
   const concursos = await prisma.concurso.findMany({
     orderBy: { numeroConcurso: 'desc' },

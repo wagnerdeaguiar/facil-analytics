@@ -2,34 +2,44 @@
 
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { SITE_NAME } from '@/lib/site-identity';
 
 type Props = {
   className?: string;
   children?: React.ReactNode;
   grande?: boolean;
+  /** Quando omitido, detecta via /api/health (devAuth). */
+  devAuth?: boolean;
 };
 
-/** Um clique — login automático no seu PC (sem Google). */
-export function BotaoEntrarApp({ className = 'btn-primary', children, grande }: Props) {
+export function BotaoEntrarApp({ className = 'btn-primary', children, grande, devAuth }: Props) {
   const router = useRouter();
   const { status } = useSession();
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
+  const [modoDev, setModoDev] = useState<boolean | null>(devAuth ?? null);
+
+  useEffect(() => {
+    if (devAuth !== undefined) return;
+    fetch('/api/health')
+      .then((r) => r.json())
+      .then((h) => setModoDev(h.devAuth === true))
+      .catch(() => setModoDev(false));
+  }, [devAuth]);
+
+  const isDev = modoDev === true;
+  const aguardando = modoDev === null;
 
   if (status === 'authenticated') {
     return (
-      <button
-        type="button"
-        className={className}
-        onClick={() => router.push('/dashboard')}
-      >
+      <button type="button" className={className} onClick={() => router.push('/dashboard')}>
         {children ?? 'Abrir o Dashboard'}
       </button>
     );
   }
 
-  async function entrar() {
+  async function entrarDev() {
     setLoading(true);
     setErro('');
     const email = 'wagdeaguiar@gmail.com';
@@ -52,7 +62,7 @@ export function BotaoEntrarApp({ className = 'btn-primary', children, grande }: 
           setErro(
             res?.error === 'CredentialsSignin'
               ? 'Login recusado. Rode INICIAR-FACIL-ANALYTICS.bat (Docker + banco).'
-              : `Não foi possível entrar. Use http://localhost:3010/comecar (não porta 3000).`,
+              : 'Não foi possível entrar. Use http://localhost:3010/comecar (não porta 3000).',
           );
         }
       }
@@ -62,15 +72,33 @@ export function BotaoEntrarApp({ className = 'btn-primary', children, grande }: 
     setLoading(false);
   }
 
+  async function entrarGoogle() {
+    setLoading(true);
+    setErro('');
+    try {
+      await signIn('google', { callbackUrl: '/dashboard' });
+    } catch {
+      setErro('Não foi possível abrir o login Google. Tente novamente.');
+      setLoading(false);
+    }
+  }
+
+  async function entrar() {
+    if (isDev) await entrarDev();
+    else await entrarGoogle();
+  }
+
+  const labelPadrao = isDev ? `Entrar no ${SITE_NAME}` : 'Entrar com Google';
+
   return (
     <div className="space-y-2">
       <button
         type="button"
         onClick={entrar}
-        disabled={loading}
+        disabled={loading || aguardando}
         className={`${className} ${grande ? 'px-8 py-4 text-lg' : ''}`}
       >
-        {loading ? 'Abrindo o app…' : (children ?? 'Entrar no Fácil Analytics')}
+        {loading ? 'Abrindo…' : aguardando ? 'Carregando…' : (children ?? labelPadrao)}
       </button>
       {erro && <p className="text-sm text-red-300">{erro}</p>}
     </div>

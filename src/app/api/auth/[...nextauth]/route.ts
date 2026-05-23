@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import NextAuth from 'next-auth';
 import { authOptions } from '@/lib/auth';
 

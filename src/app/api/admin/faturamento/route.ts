@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api-auth';
 import { getFaturamentoResumo, listarPagamentos } from '@/lib/billing/faturamento-service';

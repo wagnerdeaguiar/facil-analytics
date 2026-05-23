@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { getPaginaCampanhaPorSlug } from '@/lib/site-banners';
 import { BotaoEntrarApp } from '@/components/BotaoEntrarApp';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CampanhaPage({ params }: { params: { slug: string } }) {
   const pagina = await getPaginaCampanhaPorSlug(params.slug);
   if (!pagina) notFound();

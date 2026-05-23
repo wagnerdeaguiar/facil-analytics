@@ -1,3 +1,5 @@
+export { dynamic } from '@/lib/route-config';
+
 import { NextResponse } from 'next/server';
 import { getPlanosAtivos, seedPlanosPadrao } from '@/lib/billing/plan-service';
 
