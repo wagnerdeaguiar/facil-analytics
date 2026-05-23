@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAdmin } from '@/lib/api-auth';
+import { getPlanoBySlug } from '@/lib/billing/plan-service';
+import { syncSubscriptionAccess } from '@/lib/billing/sync-access';
 import { prisma } from '@/lib/db';
 
-async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'admin') {
-    return null;
-  }
-  return session;
-}
-
 export async function GET(request: Request) {
-  if (!(await requireAdmin())) {
-    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-  }
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q')?.trim();
@@ -44,10 +36,9 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const session = await requireAdmin();
-  if (!session) {
-    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-  }
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
+  const session = auth.session;
 
   const body = await request.json();
   const userId = body.userId as string;
@@ -71,14 +62,19 @@ export async function PATCH(request: Request) {
   });
 
   if (body.subscriptionStatus) {
-    await prisma.subscription.upsert({
-      where: { userId },
-      create: {
-        userId,
-        status: body.subscriptionStatus,
-        plano: body.subscriptionStatus === 'active' ? 'premium' : 'free',
-      },
-      update: { status: body.subscriptionStatus },
+    const status = body.subscriptionStatus as string;
+    const premiumPlano = await getPlanoBySlug('premium');
+    const freePlano = await getPlanoBySlug('free');
+    const isPaid = status === 'active' || status === 'trial';
+
+    await syncSubscriptionAccess({
+      userId,
+      status: status as 'free' | 'active' | 'trial' | 'past_due' | 'canceled' | 'failed' | 'expired' | 'pending',
+      planoSlug: isPaid ? 'premium' : 'free',
+      planoId: isPaid ? premiumPlano?.id : freePlano?.id,
+      valor: isPaid ? (premiumPlano?.valor ?? 0) : 0,
+      periodicidade: isPaid ? (premiumPlano?.periodicidade ?? 'monthly') : 'none',
+      gateway: 'manual',
     });
   }
 

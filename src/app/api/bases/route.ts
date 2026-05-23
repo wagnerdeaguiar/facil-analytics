@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireSession } from '@/lib/api-auth';
+import { requirePremium } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { getConcursosOrdenados } from '@/lib/services/analytics';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
@@ -23,7 +23,7 @@ export async function GET() {
     const concursos = await getConcursosOrdenados();
     if (!concursos.length) {
       return NextResponse.json(
-        emptyPayload('Nenhum concurso importado. Vá em Configurações para importar o histórico.'),
+        emptyPayload('Nenhum concurso importado. Vá em Resultados para importar o histórico.'),
       );
     }
 
@@ -73,7 +73,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const auth = await requireSession();
+  const auth = await requirePremium();
   if (auth.response) return auth.response;
 
   try {

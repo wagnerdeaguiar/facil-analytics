@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { isPremiumStatus } from '@/lib/subscription';
 import { usePathname, useRouter } from 'next/navigation';
 
 const SKIP_PATHS = ['/', '/entrar', '/comecar', '/precos', '/privacidade', '/demo'];
@@ -12,13 +13,14 @@ const THROTTLE_MS = 10 * 60 * 1000; // revalida a cada 10 min no mesmo navegador
  * Ao usar o app (área logada), sincroniza concursos da API a partir do último no banco.
  */
 export function SyncConcursosAuto() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const rodou = useRef(false);
+  const premium = isPremiumStatus(session?.user?.subscriptionStatus);
 
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    if (status !== 'authenticated' || !premium) return;
     if (SKIP_PATHS.includes(pathname)) return;
     if (rodou.current) return;
     if (typeof window === 'undefined') return;
@@ -39,7 +41,7 @@ export function SyncConcursosAuto() {
         }
       })
       .catch(() => {});
-  }, [status, pathname, router]);
+  }, [status, pathname, router, premium]);
 
   return null;
 }

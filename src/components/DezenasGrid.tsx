@@ -32,26 +32,54 @@ export function DezenasGrid({
   );
 }
 
-export function MatrizLotofacil({ selecionadas }: { selecionadas: Set<number> }) {
+export function MatrizLotofacil({
+  selecionadas,
+  onToggle,
+  maxSelecao,
+  estiloSelecao = 'fixa',
+  bloqueadas,
+}: {
+  selecionadas: Set<number>;
+  onToggle?: (n: number) => void;
+  maxSelecao?: number;
+  estiloSelecao?: 'fixa' | 'excluida';
+  /** Números não clicáveis (ex.: já marcados no outro conjunto) */
+  bloqueadas?: Set<number>;
+}) {
   return (
     <div className="grid grid-cols-5 gap-1">
       {Array.from({ length: 25 }, (_, i) => {
         const n = i + 1;
         const moldura = MOLDURA.has(n);
+        const sel = selecionadas.has(n);
+        const bloqueado = bloqueadas?.has(n);
+        const disabled =
+          bloqueado || (!sel && maxSelecao != null && selecionadas.size >= maxSelecao);
+        const Tag = onToggle ? 'button' : 'div';
         return (
-          <div
+          <Tag
             key={n}
+            type={onToggle ? 'button' : undefined}
+            disabled={onToggle ? disabled : undefined}
+            onClick={onToggle && !bloqueado ? () => onToggle(n) : undefined}
             className={clsx(
-              'flex h-9 items-center justify-center rounded text-xs font-mono',
-              selecionadas.has(n)
-                ? 'bg-brand-600 text-white'
-                : moldura
+              'flex h-9 items-center justify-center rounded text-xs font-mono transition',
+              onToggle && !bloqueado && 'cursor-pointer hover:ring-1',
+              onToggle && estiloSelecao === 'fixa' && !bloqueado && 'hover:ring-brand-500/50',
+              onToggle && estiloSelecao === 'excluida' && !bloqueado && 'hover:ring-red-500/50',
+              disabled && 'cursor-not-allowed opacity-40',
+              sel && estiloSelecao === 'fixa' && 'bg-brand-600 text-white',
+              sel && estiloSelecao === 'excluida' && 'bg-red-600 text-white line-through',
+              !sel && bloqueado && 'bg-slate-950 text-slate-600',
+              !sel &&
+                !bloqueado &&
+                (moldura
                   ? 'bg-slate-800 text-slate-400 ring-1 ring-slate-600'
-                  : 'bg-slate-900 text-slate-500',
+                  : 'bg-slate-900 text-slate-500'),
             )}
           >
             {String(n).padStart(2, '0')}
-          </div>
+          </Tag>
         );
       })}
     </div>

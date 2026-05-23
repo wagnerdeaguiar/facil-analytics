@@ -51,7 +51,7 @@ O QUE VOCÊ PRECISA FAZER (3 coisas — o script explica na hora)
    - Colar Client ID e Secret no arquivo .env.vercel
 
 Depois do primeiro deploy, importe o histórico Lotofácil:
-   - Entre no site → Configurações → Importar planilha
+   - Entre no site → Resultados → Importar planilha
    - Ou rode: npm run db:import-xlsx (com DATABASE_URL do Neon)
 
 --------------------------------------------------------------------------------
@@ -67,6 +67,6 @@ AJUDA
 --------------------------------------------------------------------------------
   Site não abre? Confira NEXTAUTH_URL = URL exata do Vercel (com https)
   Login falha? Google redirect: https://SEU-SITE.vercel.app/api/auth/callback/google
-  Banco vazio? Importe xlsx em Configurações após entrar no app
+  Banco vazio? Importe xlsx em Resultados após entrar no app
 
 ================================================================================

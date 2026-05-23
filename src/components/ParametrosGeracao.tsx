@@ -75,7 +75,7 @@ export function ParametrosGeracao({
   const updateCriterio = (idx: number, c: CriterioUI) => {
     const criterios = [...config.criterios];
     criterios[idx] = c;
-    onChange({ ...config, criterios });
+    onChange({ ...config, criterios, perfilId: null });
   };
 
   const r = config.regrasSequencia;
@@ -91,13 +91,51 @@ export function ParametrosGeracao({
         </div>
       </article>
 
+      {(config.maiorSeqSorteada || config.maiorSeqAusente || config.volanteLinhas || config.volanteColunas) && (
+        <article className="card">
+          <h3 className="mb-3 text-sm font-semibold text-brand-300">
+            Critérios estruturais (cartela horizontal e volante)
+          </h3>
+          <p className="mb-3 text-xs text-slate-500">
+            Linhas/colunas: mín. 1 e máx. 4 por faixa evitam cartelas com linha vazia ou com 5 dezenas (padrão
+            histórico raro).
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {config.maiorSeqSorteada && (
+              <CriterioEditor
+                c={config.maiorSeqSorteada}
+                onChange={(c) => onChange({ ...config, maiorSeqSorteada: c, perfilId: null })}
+              />
+            )}
+            {config.maiorSeqAusente && (
+              <CriterioEditor
+                c={config.maiorSeqAusente}
+                onChange={(c) => onChange({ ...config, maiorSeqAusente: c, perfilId: null })}
+              />
+            )}
+            {config.volanteLinhas && (
+              <CriterioEditor
+                c={config.volanteLinhas}
+                onChange={(c) => onChange({ ...config, volanteLinhas: c, perfilId: null })}
+              />
+            )}
+            {config.volanteColunas && (
+              <CriterioEditor
+                c={config.volanteColunas}
+                onChange={(c) => onChange({ ...config, volanteColunas: c, perfilId: null })}
+              />
+            )}
+          </div>
+        </article>
+      )}
+
       <article className="card">
         <h3 className="mb-3 text-sm font-semibold text-brand-300">Sequência e atraso (por dezena)</h3>
         <label className="mb-3 flex items-center gap-2 text-sm text-slate-300">
           <input
             type="checkbox"
             checked={config.usarSequenciaAtraso}
-            onChange={(e) => onChange({ ...config, usarSequenciaAtraso: e.target.checked })}
+            onChange={(e) => onChange({ ...config, usarSequenciaAtraso: e.target.checked, perfilId: null })}
           />
           Aplicar regras de sequência/atraso no filtro
         </label>
@@ -122,6 +160,7 @@ export function ParametrosGeracao({
                   onChange({
                     ...config,
                     regrasSequencia: { ...r, [key]: Number(e.target.value) },
+                    perfilId: null,
                   })
                 }
                 className="input mt-0.5"
@@ -139,7 +178,7 @@ export function ParametrosGeracao({
             min={0}
             max={100}
             value={config.scoreMinimo}
-            onChange={(e) => onChange({ ...config, scoreMinimo: Number(e.target.value) })}
+            onChange={(e) => onChange({ ...config, scoreMinimo: Number(e.target.value), perfilId: null })}
             className="input mt-1 max-w-[120px]"
           />
         </label>

@@ -30,6 +30,9 @@ export interface ConfigGeracao {
   fibonacci: CriterioFiltro;
   maiorSeqSorteada?: CriterioFiltro;
   maiorSeqAusente?: CriterioFiltro;
+  /** Distribuição na cartela 5×5 — evita linha/coluna vazia ou com 5 dezenas */
+  volanteLinhas?: CriterioFiltro;
+  volanteColunas?: CriterioFiltro;
   pareto?: { minQuentes?: number; baseSize?: number };
   scoreMinimo?: number;
   mapaSequenciaAtraso?: Map<number, DezenaSequenciaAtraso>;
@@ -52,6 +55,8 @@ export const CONFIG_PADRAO: ConfigGeracao = {
   fibonacci: { nome: 'fibonacci', min: 3, max: 6, alvo: 4, obrigatorio: true, ativo: true },
   maiorSeqSorteada: { nome: 'maior sequência sorteada', min: 4, max: 6, alvo: 5, obrigatorio: true, ativo: true },
   maiorSeqAusente: { nome: 'maior sequência ausente', min: 3, max: 5, alvo: 3, obrigatorio: true, ativo: true },
+  volanteLinhas: { nome: 'mín. por linha', min: 1, max: 4, alvo: 3, obrigatorio: false, ativo: false },
+  volanteColunas: { nome: 'mín. por coluna', min: 1, max: 4, alvo: 3, obrigatorio: false, ativo: false },
   scoreMinimo: 0,
   usarSequenciaAtraso: true,
 };
@@ -104,6 +109,20 @@ export function validarCriterios(m: MetricasJogo, config: ConfigGeracao): { vali
   }
   if (config.maiorSeqAusente?.ativo !== false && config.maiorSeqAusente) {
     checks.push({ c: config.maiorSeqAusente, valor: m.maiorSequenciaAusente });
+  }
+  if (config.volanteLinhas?.ativo) {
+    checks.push({ c: { ...config.volanteLinhas, nome: 'mín. por linha' }, valor: m.minLinha });
+    checks.push({
+      c: { ...config.volanteLinhas, nome: 'máx. por linha', min: undefined, max: config.volanteLinhas.max },
+      valor: m.maxLinha,
+    });
+  }
+  if (config.volanteColunas?.ativo) {
+    checks.push({ c: { ...config.volanteColunas, nome: 'mín. por coluna' }, valor: m.minColuna });
+    checks.push({
+      c: { ...config.volanteColunas, nome: 'máx. por coluna', min: undefined, max: config.volanteColunas.max },
+      valor: m.maxColuna,
+    });
   }
 
   for (const { c, valor } of checks) {

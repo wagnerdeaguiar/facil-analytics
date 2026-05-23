@@ -1,15 +1,9 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
-const PREMIUM_PATHS = [
-  '/gerador',
-  '/simulador',
-  '/exportacao',
-  '/configuracoes',
-  '/perfis',
-];
+const PREMIUM_PATHS = ['/fechamento', '/simulador', '/exportacao', '/perfis'];
 
-const AUTH_PATHS = ['/dashboard', '/conta'];
+const AUTH_PATHS = ['/dashboard', '/conta', '/gerador', '/imprimir-cartelas'];
 
 export default withAuth(
   function middleware(req) {
@@ -53,9 +47,10 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/gerador/:path*',
+    '/imprimir-cartelas/:path*',
+    '/fechamento/:path*',
     '/simulador/:path*',
     '/exportacao/:path*',
-    '/configuracoes/:path*',
     '/perfis/:path*',
     '/conta/:path*',
     '/admin/:path*',

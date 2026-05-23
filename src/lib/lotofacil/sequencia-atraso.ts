@@ -101,21 +101,63 @@ export function ajustarRegrasSequenciaParaPool(
   pool: number[],
   mapa: Map<number, DezenaSequenciaAtraso>,
   regras: RegrasSequenciaAtrasoConfig = { ...REGRAS_SEQUENCIA_ATRASO_PREMIUM },
+  fixas: number[] = [],
+  numerosPorAposta = 15,
 ): RegrasSequenciaAtrasoConfig {
-  let noPoolGte2 = 0;
-  let noPoolGte3 = 0;
-  for (const d of pool) {
+  const fixasSet = new Set(fixas);
+  const restantes = pool.filter((d) => !fixasSet.has(d));
+  const slots = Math.max(0, numerosPorAposta - fixas.length);
+
+  let restGte2 = 0;
+  let restGte3 = 0;
+  for (const d of restantes) {
     const a = mapa.get(d)?.atrasoAtual ?? 0;
-    if (a >= 2) noPoolGte2++;
-    if (a >= 3) noPoolGte3++;
+    if (a >= 2) restGte2++;
+    if (a >= 3) restGte3++;
   }
-  const maxGte2 = Math.min(15, noPoolGte2);
-  const maxGte3 = Math.min(15, noPoolGte3);
+
+  const cf = fixas.length
+    ? contarSequenciaAtrasoNoJogo(fixas, mapa)
+    : { seqGte4: 0, seqGte5: 0, seqGte6: 0, atrasoGte2: 0, atrasoGte3: 0, atrasoGte5: 0 };
+
+  const maxAtrasoGte2Possivel = cf.atrasoGte2 + Math.min(slots, restGte2);
+  const maxAtrasoGte3Possivel = cf.atrasoGte3 + Math.min(slots, restGte3);
+
   return {
     ...regras,
-    minDezenasAtrasoGte2: Math.min(regras.minDezenasAtrasoGte2, maxGte2),
-    minDezenasAtrasoGte3: Math.min(regras.minDezenasAtrasoGte3, maxGte3),
+    minDezenasAtrasoGte2: Math.min(regras.minDezenasAtrasoGte2, maxAtrasoGte2Possivel),
+    minDezenasAtrasoGte3: Math.min(regras.minDezenasAtrasoGte3, maxAtrasoGte3Possivel),
   };
+}
+
+/** Dezenas fixas entram em todo jogo — os tetos de seq./atraso precisam comportá-las. */
+export function ajustarRegrasSequenciaParaFixas(
+  fixas: number[],
+  mapa: Map<number, DezenaSequenciaAtraso>,
+  regras: RegrasSequenciaAtrasoConfig,
+): RegrasSequenciaAtrasoConfig {
+  if (!fixas.length) return regras;
+  const c = contarSequenciaAtrasoNoJogo(fixas, mapa);
+  return {
+    ...regras,
+    maxDezenasSequenciaGte6: Math.max(regras.maxDezenasSequenciaGte6, c.seqGte6),
+    maxDezenasSequenciaGte5: Math.max(regras.maxDezenasSequenciaGte5, c.seqGte5),
+    maxDezenasSequenciaGte4: Math.max(regras.maxDezenasSequenciaGte4, c.seqGte4),
+    maxDezenasAtrasoGte2: Math.max(regras.maxDezenasAtrasoGte2, c.atrasoGte2),
+    maxDezenasAtrasoGte3: Math.max(regras.maxDezenasAtrasoGte3, c.atrasoGte3),
+  };
+}
+
+/** Pool + fixas: regras de seq./atraso viáveis para geração. */
+export function ajustarRegrasSequenciaParaGeracao(
+  pool: number[],
+  fixas: number[],
+  mapa: Map<number, DezenaSequenciaAtraso>,
+  regras: RegrasSequenciaAtrasoConfig = { ...REGRAS_SEQUENCIA_ATRASO_PREMIUM },
+  numerosPorAposta = 15,
+): RegrasSequenciaAtrasoConfig {
+  const comPool = ajustarRegrasSequenciaParaPool(pool, mapa, regras, fixas, numerosPorAposta);
+  return ajustarRegrasSequenciaParaFixas(fixas, mapa, comPool);
 }
 
 function statusSequencia(seq: number): StatusSequencia {

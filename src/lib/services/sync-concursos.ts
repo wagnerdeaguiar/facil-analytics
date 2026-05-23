@@ -32,7 +32,7 @@ export async function sincronizarConcursosDesdeUltimo(): Promise<SyncConcursosRe
       fonte,
       message:
         fonte === 'nenhuma'
-          ? 'APIs indisponíveis. Importe via Excel/CSV.'
+          ? 'APIs indisponíveis. Importe via Excel em Resultados.'
           : `Base atualizada. Último concurso: #${ultimoNoBanco}.`,
     };
   }

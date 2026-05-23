@@ -1,9 +1,7 @@
 import * as XLSX from 'xlsx';
-import { join } from 'path';
+import { caminhoLotofacilXlsx } from '../src/lib/lotofacil/excel-path';
 
-const path =
-  process.argv[2] ??
-  join('C:', 'Users', 'KAPAM', 'Downloads', 'Lotofácil.xlsx');
+const path = process.argv[2] ?? caminhoLotofacilXlsx();
 
 const wb = XLSX.readFile(path, { cellDates: true });
 console.log('Arquivo:', path);

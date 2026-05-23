@@ -62,8 +62,8 @@ export default function BasesPage() {
         <div className="card text-slate-300">
           <p>{data?.mensagem ?? 'Nenhuma base disponível.'}</p>
           <p className="mt-2 text-sm">
-            <Link href="/configuracoes" className="text-brand-400 underline">
-              Importar histórico em Configurações
+            <Link href="/resultados#importacao" className="text-brand-400 underline">
+              Importar histórico em Resultados
             </Link>
           </p>
         </div>

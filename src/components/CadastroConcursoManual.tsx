@@ -1,8 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { Crown } from 'lucide-react';
+import { isPremiumStatus } from '@/lib/subscription';
 
 export function CadastroConcursoManual({ onCadastrado }: { onCadastrado?: () => void }) {
+  const { data: session } = useSession();
+  const premium = isPremiumStatus(session?.user?.subscriptionStatus);
   const [numero, setNumero] = useState('');
   const [data, setData] = useState('');
   const [dezenasTxt, setDezenasTxt] = useState('');
@@ -43,6 +49,26 @@ export function CadastroConcursoManual({ onCadastrado }: { onCadastrado?: () => 
     setData('');
     setDezenasTxt('');
     onCadastrado?.();
+  }
+
+  if (!premium) {
+    return (
+      <article className="card space-y-2 border-slate-700/50">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-300">Cadastrar concurso manualmente</h2>
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+            <Crown className="h-3 w-3" />
+            Premium
+          </span>
+        </div>
+        <p className="text-xs text-slate-500">
+          Disponível no Plano Premium.{' '}
+          <Link href="/precos" className="text-brand-400 underline">
+            Assinar plano
+          </Link>
+        </p>
+      </article>
+    );
   }
 
   return (

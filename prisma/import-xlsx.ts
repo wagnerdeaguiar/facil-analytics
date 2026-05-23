@@ -2,20 +2,21 @@
  * Importa Lotofácil.xlsx (aba LOTOFÁCIL)
  * Uso:
  *   npx tsx prisma/import-xlsx.ts
- *   npx tsx prisma/import-xlsx.ts "C:\Users\KAPAM\Downloads\Lotofácil.xlsx"
+ *   npx tsx prisma/import-xlsx.ts "C:\Downloads\Lotofácil.xlsx"
  *   npx tsx prisma/import-xlsx.ts --de 3442 --ate 3542
  *   npx tsx prisma/import-xlsx.ts --append  (não apaga base)
  */
 import { PrismaClient } from '@prisma/client';
 import { concursoToDbFields } from '../src/lib/lotofacil/import';
 import { parseXlsxLotofacil, resumoXlsx } from '../src/lib/lotofacil/import-xlsx';
+import { caminhoLotofacilXlsx } from '../src/lib/lotofacil/excel-path';
 import { recalcularEstatisticasGlobais } from '../src/lib/services/analytics';
 
 const prisma = new PrismaClient();
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  let path = 'C:\\Users\\KAPAM\\Downloads\\Lotofácil.xlsx';
+  let path = caminhoLotofacilXlsx();
   let de: number | undefined;
   let ate: number | undefined;
   let substituir = true;

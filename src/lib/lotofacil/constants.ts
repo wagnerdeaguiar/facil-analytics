@@ -90,6 +90,11 @@ export interface MetricasJogo {
   quentesNaBase: number;
   linhas: number[];
   colunas: number[];
+  /** Menor/m maior contagem por linha ou coluna na cartela 5×5 */
+  minLinha: number;
+  maxLinha: number;
+  minColuna: number;
+  maxColuna: number;
   sequencias: number;
   grupo1_5: number;
   grupo6_10: number;

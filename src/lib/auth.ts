@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/db';
 import { getDevAuthEmail, isDevAuthEnabled, isGoogleAuthConfigured } from '@/lib/auth-config';
+import { getPlanoBySlug } from '@/lib/billing/plan-service';
 
 const adminEmails = (process.env.ADMIN_EMAIL ?? '')
   .split(',')
@@ -38,6 +39,7 @@ function buildProviders(): NonNullable<NextAuthOptions['providers']> {
           const isAdmin = adminEmails.includes(email);
           const premium = process.env.AUTH_DEV_PREMIUM === 'true';
           const subscriptionStatus = premium ? 'active' : 'free';
+          const premiumPlano = premium ? await getPlanoBySlug('premium') : null;
 
           const user = await prisma.user.upsert({
             where: { email },
@@ -60,9 +62,19 @@ function buildProviders(): NonNullable<NextAuthOptions['providers']> {
               userId: user.id,
               status: subscriptionStatus,
               plano: premium ? 'premium' : 'free',
-              valor: premium ? 4.99 : 0,
+              planoId: premiumPlano?.id,
+              valor: premiumPlano?.valor ?? 0,
+              periodicidade: premium ? (premiumPlano?.periodicidade ?? 'monthly') : 'none',
+              gateway: premium ? 'manual' : undefined,
             },
-            update: premium ? { status: 'active', plano: 'premium' } : {},
+            update: premium
+              ? {
+                  status: 'active',
+                  plano: 'premium',
+                  planoId: premiumPlano?.id,
+                  valor: premiumPlano?.valor ?? 0,
+                }
+              : {},
           });
 
           return {

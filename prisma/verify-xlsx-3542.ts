@@ -1,6 +1,7 @@
 import { parseXlsxLotofacil } from '../src/lib/lotofacil/import-xlsx';
+import { caminhoLotofacilXlsx } from '../src/lib/lotofacil/excel-path';
 
-const path = 'C:\\Users\\KAPAM\\Downloads\\Lotofácil.xlsx';
+const path = caminhoLotofacilXlsx();
 const c3542 = parseXlsxLotofacil(path, { concursoDe: 3542, concursoAte: 3542 })[0];
 const esperado = [1, 2, 5, 8, 11, 12, 13, 15, 18, 19, 21, 22, 23, 24, 25];
 

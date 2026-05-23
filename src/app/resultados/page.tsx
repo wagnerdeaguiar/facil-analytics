@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { DezenasGrid } from '@/components/DezenasGrid';
 import { CadastroConcursoManual } from '@/components/CadastroConcursoManual';
+import { ImportacaoHistorico } from '@/components/ImportacaoHistorico';
 
 interface Concurso {
   numeroConcurso: number;
@@ -59,8 +60,12 @@ export default function ResultadosPage() {
     <section className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold">Resultados</h1>
-        <p className="text-sm text-slate-400">Histórico importado com estatísticas por concurso.</p>
+        <p className="text-sm text-slate-400">
+          Histórico importado com estatísticas por concurso. Importe ou atualize a base na seção abaixo.
+        </p>
       </header>
+
+      <ImportacaoHistorico onAtualizado={carregar} />
 
       <CadastroConcursoManual onCadastrado={carregar} />
 

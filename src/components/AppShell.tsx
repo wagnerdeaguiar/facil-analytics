@@ -7,12 +7,17 @@ import { SyncConcursosAuto } from '@/components/SyncConcursosAuto';
 import { AvisoSyncConcursos } from '@/components/AvisoSyncConcursos';
 
 const PUBLIC_LAYOUT = ['/', '/entrar', '/comecar', '/precos', '/privacidade', '/demo', '/sobre'];
+const MINIMAL_LAYOUT = ['/imprimir-cartelas'];
+
+const PUBLIC_PREFIXES = ['/campanha'];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPublic = PUBLIC_LAYOUT.includes(pathname);
+  const isPublic =
+    PUBLIC_LAYOUT.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(`${p}/`));
+  const isMinimal = MINIMAL_LAYOUT.includes(pathname);
 
-  if (isPublic) {
+  if (isPublic || isMinimal) {
     return <>{children}</>;
   }
 

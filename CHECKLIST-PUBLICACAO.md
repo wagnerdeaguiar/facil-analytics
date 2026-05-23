@@ -1,8 +1,10 @@
-# Checklist de publicação — Fácil Analytics
+# Checklist de publicação — Sorte Fácil (sortefacil.pro)
 
-Use este guia **na ordem**. O atalho `PUBLICAR-FACIL-ANALYTICS.bat` automatiza parte dos passos.
+Use este guia **na ordem**. Guia resumido: **PRODUCAO-SORTEFACIL.md**
 
 Repositório: https://github.com/wagnerdeaguiar/facil-analytics
+
+**Produção:** `https://sortefacil.pro` · Admin: `contato@sortefacil.pro`
 
 ---
 
@@ -33,11 +35,15 @@ Repositório: https://github.com/wagnerdeaguiar/facil-analytics
 
 1. https://console.cloud.google.com/apis/credentials
 2. Criar **ID do cliente OAuth** → Aplicativo da Web
-3. **URIs de redirecionamento autorizados** (substitua `SEU-DOMINIO`):
+3. **URIs de redirecionamento autorizados**:
    ```
-   https://SEU-DOMINIO.vercel.app/api/auth/callback/google
+   https://sortefacil.pro/api/auth/callback/google
    ```
-4. Copiar **Client ID** e **Client Secret**
+4. **Origens JavaScript autorizadas**:
+   ```
+   https://sortefacil.pro
+   ```
+5. Copiar **Client ID** e **Client Secret**
 
 - [ ] OAuth criado
 - [ ] Redirect URI com URL final do Vercel
@@ -53,19 +59,22 @@ Repositório: https://github.com/wagnerdeaguiar/facil-analytics
 | Variável | Valor | Ambiente |
 |----------|--------|----------|
 | `DATABASE_URL` | Connection string do Neon | Production |
-| `NEXTAUTH_URL` | `https://SEU-APP.vercel.app` (URL exata, com https) | Production |
+| `NEXTAUTH_URL` | `https://sortefacil.pro` | Production |
 | `NEXTAUTH_SECRET` | string aleatória longa (`openssl rand -base64 32`) | Production |
 | `GOOGLE_CLIENT_ID` | do Google Console | Production |
 | `GOOGLE_CLIENT_SECRET` | do Google Console | Production |
-| `ADMIN_EMAIL` | seu e-mail admin | Production |
+| `ADMIN_EMAIL` | `contato@sortefacil.pro` | Production |
 | `AUTH_DEV_MODE` | **`false`** | Production |
-| `STRIPE_SECRET_KEY` | (opcional, se cobrar Premium) | Production |
-| `STRIPE_WEBHOOK_SECRET` | (opcional) | Production |
-| `STRIPE_PRICE_ID` | (opcional) | Production |
+| `ASAAS_API_KEY` | Chave API Asaas | Production |
+| `ASAAS_WEBHOOK_TOKEN` | Token do webhook Asaas | Production |
+| `ASAAS_ENV` | `production` | Production |
+| `CRON_SECRET` | (Vercel preenche nos Cron Jobs) | Production |
 
 4. Deploy → aguarde build verde
+5. **Settings → Domains** → adicionar `sortefacil.pro`
 
 - [ ] Deploy concluído
+- [ ] Domínio `sortefacil.pro` configurado
 - [ ] `AUTH_DEV_MODE=false` em produção
 - [ ] `NEXTAUTH_URL` = URL real do site
 
@@ -78,11 +87,12 @@ No seu PC (com `DATABASE_URL` do Neon no terminal ou `.env` temporário):
 ```bash
 npx prisma db push
 npm run db:seed
+npm run db:seed-planos
 npm run db:seed-perfis
 npm run db:import-xlsx
 ```
 
-Ou pelo site: login → **Configurações** → importar planilha.
+Ou pelo site: login → **Resultados** → importar planilha.
 
 - [ ] Tabelas criadas no Neon
 - [ ] Histórico importado (milhares de concursos)
@@ -90,14 +100,16 @@ Ou pelo site: login → **Configurações** → importar planilha.
 
 ---
 
-## Fase 6 — Stripe (opcional — cobrança Premium)
+## Fase 6 — Asaas (cobrança Premium)
 
-1. Criar produto/preço mensal no Stripe
-2. Webhook: `https://SEU-APP.vercel.app/api/stripe/webhook`
-3. Eventos: `checkout.session.completed`, `customer.subscription.updated`, etc.
-4. Colar `STRIPE_WEBHOOK_SECRET` na Vercel
+1. Criar conta Asaas (produção ou sandbox)
+2. Webhook: `https://sortefacil.pro/api/asaas/webhook`
+3. Eventos: `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `SUBSCRIPTION_DELETED`, etc.
+4. Configurar `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` e `ASAAS_ENV` na Vercel
+5. Cron diário (já no `vercel.json`): expira assinaturas vencidas
 
-- [ ] Stripe configurado (se for monetizar)
+- [ ] Asaas configurado
+- [ ] Planos seed: `npm run db:seed-planos`
 
 ---
 
@@ -121,7 +133,7 @@ Ou pelo site: login → **Configurações** → importar planilha.
 | Login dev só em `NODE_ENV !== production` | automático no código |
 | APIs de escrita exigem login | sync, import, manual, bases PUT |
 | Gerador/export/simulador exigem Premium | middleware + API |
-| Webhook Stripe valida assinatura | implementado |
+| Webhook Asaas valida token | implementado |
 
 ---
 
@@ -131,7 +143,7 @@ Ou pelo site: login → **Configurações** → importar planilha.
 |---------|---------|
 | Login falha | Conferir `NEXTAUTH_URL` e redirect URI do Google |
 | Banco vazio | `db push` + importar xlsx no Neon |
-| Gerador 403 | Assinar Premium ou ativar trial/Stripe |
+| Gerador 403 | Assinar Premium em /precos ou trial via admin |
 | Build falha na Vercel | Rodar `npm run build` local e corrigir erros |
 
 ---

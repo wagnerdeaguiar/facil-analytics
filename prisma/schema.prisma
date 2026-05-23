@@ -14,6 +14,8 @@ model User {
   emailVerified      DateTime?
   image              String?
   passwordHash       String?
+  cpf                String?
+  telefone           String?
   role               String    @default("user")
   subscriptionStatus String    @default("free")
   isBlocked          Boolean   @default(false)
@@ -27,6 +29,7 @@ model User {
   jogos         JogoGerado[]
   perfis        PerfilGeracao[]
   auditLogs     AuditLog[]
+  payments      Payment[]
 }
 
 model Account {
@@ -67,10 +70,12 @@ model Subscription {
   id                     String    @id @default(cuid())
   userId                 String    @unique
   user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plano                  String    @default("premium")
-  valor                  Float     @default(4.99)
+  planoId                String?
+  planoRef               Plano?    @relation(fields: [planoId], references: [id], onDelete: SetNull)
+  plano                  String    @default("free")
+  valor                  Float     @default(0)
   moeda                  String    @default("BRL")
-  periodicidade          String    @default("monthly")
+  periodicidade          String    @default("none")
   status                 String    @default("free")
   gateway                String?
   gatewayCustomerId      String?
@@ -79,8 +84,12 @@ model Subscription {
   dataInicio             DateTime?
   dataRenovacao          DateTime?
   dataCancelamento       DateTime?
+  currentPeriodEnd       DateTime?
+  gracePeriodUntil       DateTime?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
+
+  payments Payment[]
 }
 
 model AuditLog {
@@ -287,4 +296,65 @@ model ConfiguracaoApp {
   chave     String   @unique
   valor     Json
   updatedAt DateTime @updatedAt
+}
+
+model Plano {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  nome          String
+  descricao     String?  @db.Text
+  valor         Float    @default(0)
+  moeda         String   @default("BRL")
+  periodicidade String   @default("none")
+  limites       Json
+  recursos      Json     @default("[]")
+  ordem         Int      @default(0)
+  ativo         Boolean  @default(true)
+  destaque      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions Subscription[]
+  payments      Payment[]
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  userId             String
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId     String?
+  subscription       Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  planoId            String?
+  plano              Plano?        @relation(fields: [planoId], references: [id], onDelete: SetNull)
+  gateway            String        @default("asaas")
+  gatewayPaymentId   String?       @unique
+  gatewayInvoiceUrl  String?
+  gatewayBankSlipUrl String?
+  gatewayPixPayload  String?       @db.Text
+  valor              Float
+  moeda              String        @default("BRL")
+  status             String        @default("pending")
+  metodo             String?
+  descricao          String?
+  dueDate            DateTime?
+  paidAt             DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BillingEvent {
+  id             String   @id @default(cuid())
+  gateway        String
+  gatewayEventId String   @unique
+  eventType      String
+  payload        Json
+  userId         String?
+  processedAt    DateTime @default(now())
+
+  @@index([eventType])
+  @@index([userId])
 }

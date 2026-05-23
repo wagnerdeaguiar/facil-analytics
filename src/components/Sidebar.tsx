@@ -19,10 +19,13 @@ import {
   Menu,
   X,
   Crown,
+  Grid3X3,
+  BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
 import { isPremiumStatus } from '@/lib/subscription';
+import { SITE_NAME, SITE_TAGLINE } from '@/lib/site-identity';
 
 const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -31,11 +34,12 @@ const links = [
   { href: '/bases', label: 'Bases Pareto', icon: Layers },
   { href: '/sequencias', label: 'Seq. e Atrasos', icon: Activity },
   { href: '/estrutura-horizontal', label: 'Estrutura Horizontal', icon: Rows3 },
-  { href: '/gerador', label: 'Gerador', icon: Sparkles, premium: true },
+  { href: '/manual', label: 'Manual', icon: BookOpen },
+  { href: '/gerador', label: 'Gerador', icon: Sparkles },
+  { href: '/fechamento', label: 'Fechamento', icon: Grid3X3, premium: true },
   { href: '/simulador', label: 'Simulador', icon: FlaskConical, premium: true },
   { href: '/exportacao', label: 'Exportação', icon: Download, premium: true },
   { href: '/perfis', label: 'Perfis', icon: Settings, premium: true },
-  { href: '/configuracoes', label: 'Configurações', icon: Settings, premium: true },
 ];
 
 export function Sidebar() {
@@ -48,7 +52,8 @@ export function Sidebar() {
     <nav className="flex flex-col gap-1 p-3">
       <div className="mb-4 px-2">
         <Link href="/" className="block">
-          <h1 className="text-lg font-bold text-brand-400">Fácil Analytics</h1>
+          <h1 className="text-lg font-bold text-brand-400">{SITE_NAME}</h1>
+          <p className="text-xs text-slate-500">{SITE_TAGLINE}</p>
           <p className="text-xs text-slate-400">Padrão histórico · Sem garantia</p>
         </Link>
       </div>
@@ -107,7 +112,7 @@ export function Sidebar() {
         )}
         {!premium && (
           <Link href="/precos" className="btn-secondary mt-2 block text-center text-xs">
-            Premium R$ 4,99
+            Ver planos
           </Link>
         )}
       </div>

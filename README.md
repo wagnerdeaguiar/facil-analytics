@@ -6,7 +6,7 @@ Aplicativo web para **análise estatística**, **geração filtrada**, **bases P
 
 ## Funcionalidades
 
-- Importação de histórico (CSV / JSON / API Caixa)
+- Importação de histórico (Excel / API Loterias)
 - Cálculo automático de métricas por concurso
 - Critérios Fortes: faixas com recorrência ≥ 80% no histórico importado
 - Bases 18D, 19D e 20D (Pareto) com cobertura histórica
@@ -52,28 +52,18 @@ Abra [http://localhost:3010](http://localhost:3010).
 
 ### Lotofácil.xlsx (Downloads)
 
-Planilha com **3.687 concursos** (aba `LOTOFÁCIL`): Concurso, Data Sorteio, Bola1–Bola15.
+Baixe o histórico no [site da Caixa (Lotofácil)](https://loterias.caixa.gov.br/Paginas/Lotofacil.aspx) e salve como `C:\Downloads\Lotofácil.xlsx`.
+
+Planilha com aba `LOTOFÁCIL`: Concurso, Data Sorteio, Bola1–Bola15.
 
 ```bash
-# Histórico completo
+# Histórico completo (Lotofácil.xlsx em Downloads)
 npm run db:import-xlsx
-
-# Apenas recorte MazuSoft
-npm run db:import-xlsx -- --de 3442 --ate 3542
 ```
 
-Na interface: **Configurações → Importar Lotofácil.xlsx**
+Na interface: **Resultados → Importar histórico completo (Excel)**
 
-### TXT / CSV
-
-Em **Configurações**, cole um CSV:
-
-```text
-3500;18/05/2026;01 03 04 05 07 08 09 10 12 14 16 18 20 22 24
-3501;19/05/2026;02 03 05 06 08 09 11 12 13 15 17 19 21 23 25
-```
-
-Ou use **Atualizar último concurso** (API pública da Caixa, quando disponível).
+Use **Atualizar último concurso** para sincronizar o sorteio mais recente.
 
 ## Estrutura do banco
 

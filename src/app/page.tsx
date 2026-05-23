@@ -1,6 +1,9 @@
+import { BannersPublicidade } from '@/components/BannersPublicidade';
+import { PlanosSection } from '@/components/PlanosSection';
 import Link from 'next/link';
 import { Disclaimer } from '@/components/Disclaimer';
 import { BotaoEntrarApp } from '@/components/BotaoEntrarApp';
+import { SITE_EMAIL, SITE_NAME, SITE_TAGLINE } from '@/lib/site-identity';
 import { BarChart3, Shield, Sparkles, Target } from 'lucide-react';
 
 export default function LandingPage() {
@@ -9,8 +12,8 @@ export default function LandingPage() {
       <header className="border-b border-slate-800/80 px-4 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-brand-400">Fácil Analytics</h1>
-            <p className="text-xs text-slate-400">Plataforma estatística Lotofácil</p>
+            <h1 className="text-xl font-bold text-brand-400">{SITE_NAME}</h1>
+            <p className="text-xs text-slate-400">{SITE_TAGLINE}</p>
           </div>
           <nav className="flex items-center gap-3">
             <BotaoEntrarApp className="btn-primary text-sm" grande>
@@ -32,7 +35,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col items-center gap-3">
             <BotaoEntrarApp className="btn-primary px-10 py-4 text-lg font-semibold shadow-lg shadow-brand-900/40" grande>
-              Abrir Fácil Analytics
+              Abrir {SITE_NAME}
             </BotaoEntrarApp>
             <p className="text-xs text-slate-500">
               Ou dê dois cliques em <strong className="text-slate-400">INICIAR-FACIL-ANALYTICS.bat</strong> na pasta do projeto
@@ -75,10 +78,30 @@ export default function LandingPage() {
             </Link>
           </div>
         </section>
+
+        <section className="border-t border-slate-800/60 pt-10">
+          <PlanosSection modo="landing" />
+        </section>
+
+        <section className="border-t border-slate-800/60 pt-10">
+          <p className="mb-5 text-center text-xs uppercase tracking-widest text-slate-500">Destaques</p>
+          <BannersPublicidade />
+        </section>
       </main>
 
       <footer className="border-t border-slate-800 px-4 py-6 text-center text-xs text-slate-500">
-        Fácil Analytics — ferramenta de apoio à decisão, não lotérica oficial.
+        {SITE_NAME} — ferramenta de apoio à decisão, não lotérica oficial.{' '}
+        <a href={`mailto:${SITE_EMAIL}`} className="text-slate-400 hover:underline">
+          {SITE_EMAIL}
+        </a>
+        {' · '}
+        <Link href="/manual" className="text-brand-400 hover:underline">
+          Manual do usuário
+        </Link>
+        {' · '}
+        <Link href="/privacidade" className="text-slate-400 hover:underline">
+          Privacidade
+        </Link>
       </footer>
     </div>
   );

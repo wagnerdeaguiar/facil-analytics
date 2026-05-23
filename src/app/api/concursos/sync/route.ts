@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { requireSession } from '@/lib/api-auth';
+import { requirePremium } from '@/lib/api-auth';
 import { sincronizarConcursosDesdeUltimo } from '@/lib/services/sync-concursos';
 
 /** Sincroniza concursos novos a partir do último gravado no banco */
 export async function POST() {
-  const auth = await requireSession();
+  const auth = await requirePremium();
   if (auth.response) return auth.response;
 
   try {

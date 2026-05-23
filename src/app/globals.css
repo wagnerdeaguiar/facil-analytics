@@ -36,4 +36,73 @@ body {
   .badge-medio {
     @apply rounded-full bg-amber-900/50 px-2 py-0.5 text-xs text-amber-200;
   }
+  .prose-manual strong {
+    @apply text-slate-100;
+  }
+  .prose-manual code {
+    @apply rounded bg-slate-800 px-1 py-0.5 font-mono text-xs text-brand-300;
+  }
+  .prose-manual a {
+    @apply text-brand-400 underline-offset-2 hover:underline;
+  }
+}
+
+@media print {
+  .no-print,
+  aside,
+  header button,
+  .lg\\:hidden {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .card,
+  article {
+    border: 1px solid #ccc !important;
+    break-inside: avoid;
+  }
+  .imprimir-cartelas-root {
+    background: white !important;
+  }
+  .cartela-impressao {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 8mm;
+    box-shadow: none !important;
+  }
+  input[type='checkbox'] {
+    display: none !important;
+  }
+}
+
+@keyframes banner-glow {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes banner-float {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(-6px, 6px);
+    opacity: 0.7;
+  }
+}
+
+.animate-banner-glow {
+  animation: banner-glow 4s ease-in-out infinite;
+}
+
+.animate-banner-float {
+  animation: banner-float 6s ease-in-out infinite;
 }

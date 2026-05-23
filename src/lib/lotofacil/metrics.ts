@@ -93,11 +93,12 @@ export function calcularMetricas(
     quentesNaBase = sorted.filter((d) => baseSet.has(d)).length;
   }
 
+  const n = sorted.length;
   return {
     dezenas: sorted,
     soma: sorted.reduce((a, b) => a + b, 0),
     pares,
-    impares: 15 - pares,
+    impares: n - pares,
     primos: contarNoSet(sorted, PRIMOS),
     fibonacci: contarNoSet(sorted, FIBONACCI),
     moldura: contarNoSet(sorted, MOLDURA),
@@ -107,6 +108,10 @@ export function calcularMetricas(
     quentesNaBase,
     linhas,
     colunas,
+    minLinha: Math.min(...linhas),
+    maxLinha: Math.max(...linhas),
+    minColuna: Math.min(...colunas),
+    maxColuna: Math.max(...colunas),
     sequencias: contarSequencias(sorted),
     grupo1_5: contarGrupo(sorted, GRUPOS.g1_5.min, GRUPOS.g1_5.max),
     grupo6_10: contarGrupo(sorted, GRUPOS.g6_10.min, GRUPOS.g6_10.max),

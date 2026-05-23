@@ -66,8 +66,8 @@ export default async function DashboardPage() {
         <div className="card">
           <p className="text-slate-300">
             Nenhum concurso importado. Vá em{' '}
-            <Link href="/configuracoes" className="text-brand-400 underline">
-              Configurações
+            <Link href="/resultados#importacao" className="text-brand-400 underline">
+              Resultados
             </Link>{' '}
             para importar o histórico.
           </p>

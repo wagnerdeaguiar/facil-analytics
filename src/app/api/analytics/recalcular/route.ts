@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { requireSession } from '@/lib/api-auth';
+import { requirePremium } from '@/lib/api-auth';
 import { recalcularEstatisticasGlobais } from '@/lib/services/analytics';
 
 export async function POST() {
-  const auth = await requireSession();
+  const auth = await requirePremium();
   if (auth.response) return auth.response;
 
   try {

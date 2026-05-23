@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireSession } from '@/lib/api-auth';
+import { requirePremium } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { concursoToDbFields } from '@/lib/lotofacil/import';
 import { recalcularEstatisticasGlobais } from '@/lib/services/analytics';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
 
 export async function POST(request: Request) {
-  const auth = await requireSession();
+  const auth = await requirePremium();
   if (auth.response) return auth.response;
 
   try {

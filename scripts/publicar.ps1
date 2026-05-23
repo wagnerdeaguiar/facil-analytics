@@ -46,13 +46,21 @@ if ($pushOk) {
 Write-Host ""
 Write-Host "[2/7] Banco de dados (Neon)..." -ForegroundColor Yellow
 Write-Host "      Abrindo Neon.tech - crie um projeto PostgreSQL gratis." -ForegroundColor Gray
-Write-Host "      Copie a Connection string (postgresql://...)" -ForegroundColor Gray
+Write-Host "      No Neon: Connect -> Connection string -> copie (modo Pooled)." -ForegroundColor Gray
+Write-Host "      Cole aqui no terminal (comeca com postgresql://)" -ForegroundColor Gray
 Open-Link "https://console.neon.tech/app/projects"
-Pause-Step "Cole a connection string do Neon abaixo:"
 
-$dbUrl = Read-Host "DATABASE_URL (Neon)"
-if (-not $dbUrl -or $dbUrl -notmatch "^postgresql") {
-    Write-Host "URL invalida. Tente de novo mais tarde." -ForegroundColor Red
+$dbUrl = $null
+for ($tentativa = 1; $tentativa -le 5; $tentativa++) {
+    $entrada = Read-Host "DATABASE_URL (Neon)"
+    $dbUrl = $entrada.Trim().Trim('"').Trim("'")
+    if ($dbUrl -match "^postgres(ql)?://") { break }
+    Write-Host "      URL invalida ou vazia. Cole a string completa do Neon (postgresql://...)." -ForegroundColor Red
+    $dbUrl = $null
+}
+if (-not $dbUrl) {
+    Write-Host ""
+    Write-Host "      Pare aqui. Rode PUBLICAR-FACIL-ANALYTICS.bat de novo quando tiver a URL do Neon." -ForegroundColor Yellow
     exit 1
 }
 if ($dbUrl -notmatch "sslmode") {
@@ -87,7 +95,7 @@ if ($xlsx) {
     npm run db:import-xlsx 2>&1
     Write-Host "      Historico importado (ou em andamento)" -ForegroundColor Green
 } else {
-    Write-Host "      Planilha xlsx nao encontrada - importe depois em Configuracoes no site." -ForegroundColor Yellow
+    Write-Host "      Planilha xlsx nao encontrada - importe depois em Resultados no site." -ForegroundColor Yellow
 }
 
 # --- .env.vercel ---
@@ -116,15 +124,15 @@ Write-Host ""
 Write-Host "[4/7] Google OAuth (login no site)..." -ForegroundColor Yellow
 Write-Host "      1. Abra: https://console.cloud.google.com/apis/credentials" -ForegroundColor Gray
 Write-Host "      2. Criar credenciais OAuth - Aplicativo da Web" -ForegroundColor Gray
-Write-Host "      3. Origem: https://facil-analytics.vercel.app (ajuste se a URL for outra)" -ForegroundColor Gray
-Write-Host "      4. Redirect: https://facil-analytics.vercel.app/api/auth/callback/google" -ForegroundColor Gray
+Write-Host "      3. Origem: https://sortefacil.pro" -ForegroundColor Gray
+Write-Host "      4. Redirect: https://sortefacil.pro/api/auth/callback/google" -ForegroundColor Gray
 Write-Host "      5. Copie Client ID e Secret para: $envFile" -ForegroundColor Gray
 Open-Link "https://console.cloud.google.com/apis/credentials"
 Pause-Step "Edite .env.vercel com GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET, depois ENTER"
 
-Write-Host "Qual sera a URL do site? (Enter = https://facil-analytics.vercel.app)" -ForegroundColor Gray
+Write-Host "Qual sera a URL do site? (Enter = https://sortefacil.pro)" -ForegroundColor Gray
 $urlSite = Read-Host "NEXTAUTH_URL"
-if (-not $urlSite) { $urlSite = "https://facil-analytics.vercel.app" }
+if (-not $urlSite) { $urlSite = "https://sortefacil.pro" }
 $urlSite = $urlSite.TrimEnd("/")
 (Get-Content $envFile) -replace "NEXTAUTH_URL=.*", "NEXTAUTH_URL=$urlSite" | Set-Content $envFile
 
@@ -164,7 +172,8 @@ Write-Host "  Site:" -ForegroundColor Cyan
 Write-Host "  $urlSite" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Entre com Google (nao use modo dev em producao)." -ForegroundColor Gray
-Write-Host "  Admin: wagdeaguiar@gmail.com" -ForegroundColor Gray
+Write-Host "  Admin: contato@sortefacil.pro" -ForegroundColor Gray
+Write-Host "  Guia: PRODUCAO-SORTEFACIL.md" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  Variaveis: $envFile" -ForegroundColor Gray
 Write-Host "  Checklist: CHECKLIST-PUBLICACAO.md" -ForegroundColor Gray

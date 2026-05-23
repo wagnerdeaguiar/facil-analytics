@@ -1,6 +1,12 @@
 import { CONFIG_PADRAO, type ConfigGeracao, type CriterioFiltro } from '@/lib/lotofacil/scoring';
 import { PERFIL_PREMIUM } from '@/lib/lotofacil/constants';
 import { REGRAS_SEQUENCIA_ATRASO_PREMIUM } from '@/lib/lotofacil/sequencia-atraso';
+import {
+  getPerfilConfig,
+  PERFIS_GERACAO,
+  type PerfilGeracaoDef,
+  type PerfilId,
+} from '@/lib/lotofacil/perfis';
 
 export interface CriterioUI {
   nome: string;
@@ -23,10 +29,21 @@ export interface RegrasSequenciaUI {
 }
 
 export interface ConfigGeracaoUI {
+  perfilId?: PerfilId | null;
   criterios: CriterioUI[];
+  maiorSeqSorteada?: CriterioUI;
+  maiorSeqAusente?: CriterioUI;
+  volanteLinhas?: CriterioUI;
+  volanteColunas?: CriterioUI;
   scoreMinimo: number;
   usarSequenciaAtraso: boolean;
   regrasSequencia: RegrasSequenciaUI;
+}
+
+export interface GeradorPrefsSalvas {
+  config: ConfigGeracaoUI;
+  origemBase: string;
+  maxDezenasIguais: number;
 }
 
 const LABELS: Record<string, string> = {
@@ -38,6 +55,10 @@ const LABELS: Record<string, string> = {
   centro: 'Centro',
   primos: 'Primos',
   fibonacci: 'Fibonacci',
+  maiorSeqSorteada: 'Maior sequência sorteada',
+  maiorSeqAusente: 'Maior sequência ausente',
+  volanteLinhas: 'Volante — mín./máx. por linha',
+  volanteColunas: 'Volante — mín./máx. por coluna',
 };
 
 function criterioToUI(c: CriterioFiltro): CriterioUI {
@@ -52,8 +73,10 @@ function criterioToUI(c: CriterioFiltro): CriterioUI {
   };
 }
 
-export function configToUI(config: ConfigGeracao, scoreMinimo = 0): ConfigGeracaoUI {
-  return {
+export function configToUI(config: ConfigGeracao, scoreMinimo = 0, perfilId?: PerfilId | null): ConfigGeracaoUI {
+  const regras = { ...REGRAS_SEQUENCIA_ATRASO_PREMIUM, ...config.regrasSequenciaAtraso };
+  const ui: ConfigGeracaoUI = {
+    perfilId: perfilId ?? null,
     criterios: [
       criterioToUI(config.repetidas),
       criterioToUI(config.pares),
@@ -67,16 +90,55 @@ export function configToUI(config: ConfigGeracao, scoreMinimo = 0): ConfigGeraca
     scoreMinimo,
     usarSequenciaAtraso: config.usarSequenciaAtraso ?? true,
     regrasSequencia: {
-      maxDezenasSequenciaGte4: REGRAS_SEQUENCIA_ATRASO_PREMIUM.maxDezenasSequenciaGte4,
-      maxDezenasSequenciaGte5: REGRAS_SEQUENCIA_ATRASO_PREMIUM.maxDezenasSequenciaGte5,
-      maxDezenasSequenciaGte6: REGRAS_SEQUENCIA_ATRASO_PREMIUM.maxDezenasSequenciaGte6,
-      minDezenasAtrasoGte2: REGRAS_SEQUENCIA_ATRASO_PREMIUM.minDezenasAtrasoGte2,
-      maxDezenasAtrasoGte2: REGRAS_SEQUENCIA_ATRASO_PREMIUM.maxDezenasAtrasoGte2,
-      minDezenasAtrasoGte3: REGRAS_SEQUENCIA_ATRASO_PREMIUM.minDezenasAtrasoGte3,
-      maxDezenasAtrasoGte3: REGRAS_SEQUENCIA_ATRASO_PREMIUM.maxDezenasAtrasoGte3,
+      maxDezenasSequenciaGte4: regras.maxDezenasSequenciaGte4,
+      maxDezenasSequenciaGte5: regras.maxDezenasSequenciaGte5,
+      maxDezenasSequenciaGte6: regras.maxDezenasSequenciaGte6,
+      minDezenasAtrasoGte2: regras.minDezenasAtrasoGte2,
+      maxDezenasAtrasoGte2: regras.maxDezenasAtrasoGte2,
+      minDezenasAtrasoGte3: regras.minDezenasAtrasoGte3,
+      maxDezenasAtrasoGte3: regras.maxDezenasAtrasoGte3,
     },
   };
+  if (config.maiorSeqSorteada) {
+    ui.maiorSeqSorteada = criterioToUI({ ...config.maiorSeqSorteada, nome: 'maiorSeqSorteada' });
+  }
+  if (config.maiorSeqAusente) {
+    ui.maiorSeqAusente = criterioToUI({ ...config.maiorSeqAusente, nome: 'maiorSeqAusente' });
+  }
+  ui.volanteLinhas = criterioToUI({
+    ...(config.volanteLinhas ?? CONFIG_PADRAO.volanteLinhas!),
+    nome: 'volanteLinhas',
+  });
+  ui.volanteColunas = criterioToUI({
+    ...(config.volanteColunas ?? CONFIG_PADRAO.volanteColunas!),
+    nome: 'volanteColunas',
+  });
+  return ui;
 }
+
+export function perfilIdValido(id: string | null | undefined): id is PerfilId {
+  return id != null && id in PERFIS_GERACAO;
+}
+
+export function perfilBaseParaOrigem(basePadrao: PerfilGeracaoDef['basePadrao']): string {
+  if (basePadrao === 'Livre') return 'Livre';
+  if (basePadrao === '18D' || basePadrao === '19D' || basePadrao === '20D') return basePadrao;
+  return '20D';
+}
+
+export function perfilToUI(perfil: PerfilGeracaoDef, mediaSoma?: number): ConfigGeracaoUI {
+  const cfg: ConfigGeracao = { ...perfil.config };
+  if (mediaSoma != null) {
+    cfg.soma = { ...cfg.soma, alvo: mediaSoma };
+  }
+  return configToUI(cfg, perfil.scoreMinimo, perfil.id);
+}
+
+export function perfilToUIById(id: PerfilId, mediaSoma?: number): ConfigGeracaoUI {
+  return perfilToUI(getPerfilConfig(id), mediaSoma);
+}
+
+export const LISTA_PERFIS = Object.values(PERFIS_GERACAO);
 
 export function configPadraoUI(): ConfigGeracaoUI {
   return configToUI(CONFIG_PADRAO, 0);
@@ -106,7 +168,11 @@ export function uiToConfigGeracao(ui: ConfigGeracaoUI): ConfigGeracao {
     const c = pick(nome);
     return { nome, min: c.min, max: c.max, alvo: c.alvo, obrigatorio: c.obrigatorio, ativo: c.ativo };
   };
-  return {
+  const mkExtra = (c: CriterioUI | undefined, nome: string): CriterioFiltro | undefined => {
+    if (!c || c.ativo === false) return undefined;
+    return { nome, min: c.min, max: c.max, alvo: c.alvo, obrigatorio: c.obrigatorio, ativo: c.ativo };
+  };
+  const out: ConfigGeracao = {
     repetidas: mk('repetidas'),
     pares: mk('pares'),
     impares: mk('impares'),
@@ -117,7 +183,21 @@ export function uiToConfigGeracao(ui: ConfigGeracaoUI): ConfigGeracao {
     fibonacci: mk('fibonacci'),
     scoreMinimo: ui.scoreMinimo,
     usarSequenciaAtraso: ui.usarSequenciaAtraso,
+    regrasSequenciaAtraso: uiToRegrasSequencia(ui),
   };
+  const seqS = mkExtra(ui.maiorSeqSorteada, 'maior sequência sorteada');
+  const seqA = mkExtra(ui.maiorSeqAusente, 'maior sequência ausente');
+  const vLin = mkExtra(ui.volanteLinhas, 'mín. por linha');
+  const vCol = mkExtra(ui.volanteColunas, 'mín. por coluna');
+  if (seqS) out.maiorSeqSorteada = seqS;
+  if (seqA) out.maiorSeqAusente = seqA;
+  if (vLin) out.volanteLinhas = vLin;
+  if (vCol) out.volanteColunas = vCol;
+  if (ui.perfilId) {
+    const pareto = getPerfilConfig(ui.perfilId).config.pareto;
+    if (pareto) out.pareto = pareto;
+  }
+  return out;
 }
 
 export function uiToRegrasSequencia(ui: ConfigGeracaoUI) {
@@ -125,6 +205,7 @@ export function uiToRegrasSequencia(ui: ConfigGeracaoUI) {
 }
 
 const STORAGE_KEY = 'lotofacil-config-ui';
+const PREFS_KEY = 'lotofacil-gerador-prefs';
 
 function isConfigGeracaoUI(value: unknown): value is ConfigGeracaoUI {
   return (
@@ -134,6 +215,25 @@ function isConfigGeracaoUI(value: unknown): value is ConfigGeracaoUI {
     Array.isArray((value as ConfigGeracaoUI).criterios) &&
     typeof (value as ConfigGeracaoUI).scoreMinimo === 'number'
   );
+}
+
+export function salvarGeradorPrefs(prefs: GeradorPrefsSalvas) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  salvarConfigLocal(prefs.config);
+}
+
+export function carregarGeradorPrefs(): GeradorPrefsSalvas | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as GeradorPrefsSalvas;
+    if (!parsed?.config || !isConfigGeracaoUI(parsed.config)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 export function salvarConfigLocal(ui: ConfigGeracaoUI) {

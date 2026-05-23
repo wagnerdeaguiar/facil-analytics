@@ -44,7 +44,7 @@ export default async function DemoPage() {
           </ul>
         </div>
       ) : (
-        <p className="text-slate-500">Importe concursos em Configurações (requer login Premium).</p>
+        <p className="text-slate-500">Importe concursos em Resultados (requer login Premium).</p>
       )}
       <div className="flex gap-3">
         <Link href="/entrar" className="btn-primary">

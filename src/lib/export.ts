@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx';
 import { calcularMetricas } from '@/lib/lotofacil/metrics';
+import { infoAposta } from '@/lib/lotofacil/aposta';
+import { infoApostaComTabela, type TabelaAposta } from '@/lib/lotofacil/aposta-config';
 
 /** Colunas completas conforme especificação Fácil Analytics */
 export interface JogoExportCompleto {
@@ -17,6 +19,9 @@ export interface JogoExportCompleto {
   maiorSequenciaSorteada?: number;
   maiorSequenciaAusente?: number;
   statusValidacao?: string;
+  numerosPorAposta?: number;
+  combinacoesInternas?: number;
+  valorAposta?: number;
 }
 
 export interface JogoExport extends JogoExportCompleto {}
@@ -46,12 +51,17 @@ export function enrichJogosParaExport(
   });
 }
 
-function rowFromJogo(j: JogoExportCompleto, index: number) {
+function rowFromJogo(j: JogoExportCompleto, index: number, tabela?: TabelaAposta) {
   const d = [...j.dezenas].sort((a, b) => a - b);
-  while (d.length < 15) d.push(0);
+  while (d.length < 20) d.push(0);
+  const dezenas = j.numerosPorAposta ?? j.dezenas.length;
+  const aposta = tabela ? infoApostaComTabela(dezenas, tabela) : infoAposta(dezenas);
   return {
     Jogo: index + 1,
     Base: j.origemBase ?? '',
+    Dezenas: dezenas,
+    'Valor aposta': j.valorAposta ?? aposta.preco,
+    Combinações: j.combinacoesInternas ?? aposta.combinacoes,
     Score: j.scoreEstatistico != null ? Number(j.scoreEstatistico.toFixed(2)) : '',
     D1: d[0],
     D2: d[1],
@@ -68,6 +78,11 @@ function rowFromJogo(j: JogoExportCompleto, index: number) {
     D13: d[12],
     D14: d[13],
     D15: d[14],
+    D16: d[15] || '',
+    D17: d[16] || '',
+    D18: d[17] || '',
+    D19: d[18] || '',
+    D20: d[19] || '',
     Soma: j.soma ?? '',
     Pares: j.pares ?? '',
     Ímpares: j.impares ?? '',
@@ -83,18 +98,23 @@ function rowFromJogo(j: JogoExportCompleto, index: number) {
 }
 
 const CSV_HEADER =
-  'Jogo;Base;Score;D1;D2;D3;D4;D5;D6;D7;D8;D9;D10;D11;D12;D13;D14;D15;Soma;Pares;Ímpares;Primos;Fibonacci;Moldura;Centro;Repetidas;Maior Seq. Sorteada;Maior Seq. Ausente;Status';
+  'Jogo;Base;Dezenas;Valor aposta;Combinações;Score;D1;D2;D3;D4;D5;D6;D7;D8;D9;D10;D11;D12;D13;D14;D15;D16;D17;D18;D19;D20;Soma;Pares;Ímpares;Primos;Fibonacci;Moldura;Centro;Repetidas;Maior Seq. Sorteada;Maior Seq. Ausente;Status';
 
-export function jogosToCSV(jogos: JogoExportCompleto[]): string {
+export function jogosToCSV(jogos: JogoExportCompleto[], tabela?: TabelaAposta): string {
   const rows = jogos.map((j, i) => {
-    const r = rowFromJogo(j, i);
+    const r = rowFromJogo(j, i, tabela);
     return [
       r.Jogo,
       r.Base,
+      r.Dezenas,
+      r['Valor aposta'],
+      r.Combinações,
       r.Score,
-      ...Array.from({ length: 15 }, (_, k) =>
-        String((r as Record<string, unknown>)[`D${k + 1}`] ?? '').toString().padStart(2, '0'),
-      ),
+      ...Array.from({ length: 20 }, (_, k) => {
+        const val = (r as Record<string, unknown>)[`D${k + 1}`];
+        if (val === '' || val == null) return '';
+        return String(val).padStart(2, '0');
+      }),
       r.Soma,
       r.Pares,
       r.Ímpares,
@@ -111,8 +131,8 @@ export function jogosToCSV(jogos: JogoExportCompleto[]): string {
   return [CSV_HEADER, ...rows].join('\n');
 }
 
-export function jogosToXLSXBuffer(jogos: JogoExportCompleto[]): Buffer {
-  const data = jogos.map((j, i) => rowFromJogo(j, i));
+export function jogosToXLSXBuffer(jogos: JogoExportCompleto[], tabela?: TabelaAposta): Buffer {
+  const data = jogos.map((j, i) => rowFromJogo(j, i, tabela));
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Jogos');
