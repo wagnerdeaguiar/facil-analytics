@@ -1,6 +1,9 @@
 /**
- * Promove um usuário a admin no banco (Neon/produção ou local).
- * Uso: npx tsx scripts/promote-admin.ts wagdeaguiar@gmail.com
+ * Promove usuário a admin e/ou Premium no banco (Neon/produção ou local).
+ * Uso:
+ *   npx tsx scripts/promote-admin.ts wagdeaguiar@gmail.com
+ *   npx tsx scripts/promote-admin.ts wagdeaguiar@gmail.com --premium
+ *   npx tsx scripts/promote-admin.ts wagdeaguiar@gmail.com --admin --premium
  */
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
@@ -27,9 +30,15 @@ function loadEnvFile(name: string) {
 loadEnvFile('.env');
 loadEnvFile('.env.vercel');
 
-const email = (process.argv[2] ?? '').trim().toLowerCase();
+const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const flags = new Set(process.argv.slice(2).filter((a) => a.startsWith('--')));
+
+const email = (args[0] ?? '').trim().toLowerCase();
+const asAdmin = flags.has('--admin') || flags.size === 0 || (!flags.has('--premium-only') && !flags.has('--premium'));
+const asPremium = flags.has('--premium') || flags.has('--premium-only');
+
 if (!email) {
-  console.error('Uso: npx tsx scripts/promote-admin.ts seu@email.com');
+  console.error('Uso: npx tsx scripts/promote-admin.ts seu@email.com [--admin] [--premium]');
   process.exit(1);
 }
 
@@ -42,20 +51,76 @@ async function main() {
     process.exit(1);
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { role: 'admin' },
-  });
+  const changes: string[] = [];
 
-  await prisma.auditLog.create({
-    data: {
-      userId: user.id,
-      eventType: 'admin_promoted',
-      description: 'Promovido a administrador via script promote-admin',
-    },
-  });
+  if (asAdmin) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { role: 'admin' },
+    });
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        eventType: 'admin_promoted',
+        description: 'Promovido a administrador via script promote-admin',
+      },
+    });
+    changes.push('admin');
+  }
 
-  console.log(`OK — ${email} agora é admin (id: ${user.id})`);
+  if (asPremium) {
+    const plano =
+      (await prisma.plano.findFirst({ where: { slug: 'premium', ativo: true } })) ??
+      (await prisma.plano.findFirst({ where: { ativo: true, slug: { not: 'free' } }, orderBy: { ordem: 'desc' } }));
+
+    const renovacao = new Date();
+    renovacao.setFullYear(renovacao.getFullYear() + 10);
+
+    await prisma.subscription.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        status: 'active',
+        plano: plano?.slug ?? 'premium',
+        planoId: plano?.id ?? null,
+        valor: plano?.valor ?? 0,
+        periodicidade: plano?.periodicidade ?? 'monthly',
+        gateway: 'manual',
+        dataInicio: new Date(),
+        dataRenovacao: renovacao,
+        currentPeriodEnd: renovacao,
+        dataCancelamento: null,
+      },
+      update: {
+        status: 'active',
+        plano: plano?.slug ?? 'premium',
+        planoId: plano?.id ?? null,
+        valor: plano?.valor ?? 0,
+        periodicidade: plano?.periodicidade ?? 'monthly',
+        gateway: 'manual',
+        dataRenovacao: renovacao,
+        currentPeriodEnd: renovacao,
+        dataCancelamento: null,
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { subscriptionStatus: 'active' },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        eventType: 'payment_approved',
+        description: `Premium manual ativado via script (${plano?.slug ?? 'premium'})`,
+        metadata: { gateway: 'manual', adminGrant: true },
+      },
+    });
+    changes.push('premium');
+  }
+
+  console.log(`OK — ${email}: ${changes.join(' + ') || 'nenhuma alteração'} (id: ${user.id})`);
 }
 
 main()
