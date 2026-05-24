@@ -48,12 +48,15 @@ export default async function DemoPage() {
       ) : (
         <p className="text-slate-500">Importe concursos em Resultados (requer login Premium).</p>
       )}
-      <div className="flex gap-3">
-        <Link href="/entrar" className="btn-primary">
-          Entrar com Google
+      <div className="flex flex-wrap gap-3">
+        <Link href="/cadastro" className="btn-primary">
+          Criar conta
+        </Link>
+        <Link href="/entrar" className="btn-secondary">
+          Entrar
         </Link>
         <Link href="/precos" className="btn-secondary">
-          Ver Premium
+          Ver planos
         </Link>
       </div>
     </div>
