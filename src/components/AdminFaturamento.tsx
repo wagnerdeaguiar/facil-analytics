@@ -43,6 +43,8 @@ export function AdminFaturamento() {
   const [pagamentos, setPagamentos] = useState<PagamentoRow[]>([]);
   const [filtro, setFiltro] = useState('');
   const [loading, setLoading] = useState(true);
+  const [asaasTest, setAsaasTest] = useState<string | null>(null);
+  const [testandoAsaas, setTestandoAsaas] = useState(false);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -63,6 +65,26 @@ export function AdminFaturamento() {
     carregar();
   }, [carregar]);
 
+  async function testarAsaas() {
+    setTestandoAsaas(true);
+    setAsaasTest(null);
+    try {
+      const res = await fetch('/api/admin/billing/test');
+      const data = await res.json();
+      if (data.ok) {
+        setAsaasTest(
+          `Asaas OK (${data.env}) · Webhook ${data.webhookConfigured ? 'configurado' : 'SEM TOKEN'} · ${data.webhookUrl}`,
+        );
+      } else {
+        setAsaasTest(data.error ?? data.message ?? 'Falha na conexão Asaas');
+      }
+    } catch {
+      setAsaasTest('Erro ao testar Asaas');
+    } finally {
+      setTestandoAsaas(false);
+    }
+  }
+
   if (loading && !resumo) {
     return <p className="text-sm text-slate-400">Carregando faturamento…</p>;
   }
@@ -76,11 +98,21 @@ export function AdminFaturamento() {
             Mensalidade em dia libera premium; pendente/atrasado mantém apenas o plano free.
           </p>
         </div>
-        <button type="button" onClick={carregar} className="btn-secondary text-xs">
-          <RefreshCw className="mr-1 inline h-3.5 w-3.5" />
-          Atualizar
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => void testarAsaas()} disabled={testandoAsaas} className="btn-secondary text-xs">
+            {testandoAsaas ? 'Testando…' : 'Testar Asaas'}
+          </button>
+          <button type="button" onClick={carregar} className="btn-secondary text-xs">
+            <RefreshCw className="mr-1 inline h-3.5 w-3.5" />
+            Atualizar
+          </button>
+        </div>
       </div>
+      {asaasTest && (
+        <p className={`text-xs ${asaasTest.startsWith('Asaas OK') ? 'text-emerald-400' : 'text-amber-300'}`}>
+          {asaasTest}
+        </p>
+      )}
 
       {resumo && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

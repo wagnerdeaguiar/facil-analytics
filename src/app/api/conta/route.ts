@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { listarPagamentosUsuario } from '@/lib/billing/faturamento-service';
 import { resolvePlanLimitsForUser } from '@/lib/billing/plan-service';
+import { syncAsaasCustomerForUser } from '@/lib/billing/sync-customer';
 import { isPremiumStatus } from '@/lib/subscription';
 
 export async function GET() {
@@ -69,6 +70,8 @@ export async function PATCH(request: Request) {
     },
     select: { cpf: true, telefone: true },
   });
+
+  await syncAsaasCustomerForUser(session.user.id).catch(() => {});
 
   await prisma.auditLog.create({
     data: {

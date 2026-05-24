@@ -51,8 +51,8 @@ export interface AsaasPayment {
   subscription?: string;
   value: number;
   status: string;
-  billingType: string;
-  dueDate: string;
+  billingType?: string;
+  dueDate?: string;
   invoiceUrl?: string;
   bankSlipUrl?: string;
   confirmedDate?: string;
@@ -116,6 +116,36 @@ export async function criarClienteAsaas(input: {
 
 export async function buscarClienteAsaas(id: string) {
   return asaasFetch<AsaasCustomer>(`/customers/${id}`);
+}
+
+export async function atualizarClienteAsaas(
+  id: string,
+  input: {
+    name?: string;
+    email?: string;
+    cpfCnpj?: string;
+    mobilePhone?: string;
+  },
+) {
+  return asaasFetch<AsaasCustomer>(`/customers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      ...(input.name ? { name: input.name } : {}),
+      ...(input.email ? { email: input.email } : {}),
+      ...(input.cpfCnpj ? { cpfCnpj: input.cpfCnpj.replace(/\D/g, '') } : {}),
+      ...(input.mobilePhone ? { mobilePhone: input.mobilePhone.replace(/\D/g, '') } : {}),
+    }),
+  });
+}
+
+/** Verifica se a API key e o ambiente Asaas respondem. */
+export async function testarConexaoAsaas() {
+  await asaasFetch<{ totalCount?: number }>('/customers?limit=1');
+  return {
+    ok: true,
+    env: process.env.ASAAS_ENV === 'production' ? 'production' : 'sandbox',
+    baseUrl: getAsaasBaseUrl(),
+  };
 }
 
 export async function criarAssinaturaAsaas(input: {

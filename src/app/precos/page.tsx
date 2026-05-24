@@ -6,7 +6,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { Disclaimer } from '@/components/Disclaimer';
 import { PlanosSection } from '@/components/PlanosSection';
 import { SITE_NAME } from '@/lib/site-identity';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface CheckoutResponse {
   gateway: string;
@@ -17,15 +17,63 @@ interface CheckoutResponse {
   error?: string;
 }
 
+interface BillingStatusResponse {
+  premium: boolean;
+  status: string;
+  message?: string;
+  pendingPayment?: CheckoutResponse['pix'] extends unknown
+    ? {
+        invoiceUrl: string | null;
+        bankSlipUrl: string | null;
+        pix?: CheckoutResponse['pix'];
+      }
+    : never;
+}
+
 export default function PrecosPage() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const params = useSearchParams();
   const premiumPath = params.get('premium');
   const [loading, setLoading] = useState<string | null>(null);
   const [checkout, setCheckout] = useState<CheckoutResponse | null>(null);
-  const [metodo, setMetodo] = useState<'pix' | 'boleto' | 'credit_card'>('pix');
+  const [metodo, setMetodo] = useState<'pix' | 'boleto'>('pix');
   const [erro, setErro] = useState('');
   const [precosIntro, setPrecosIntro] = useState('');
+  const [aguardandoPagamento, setAguardandoPagamento] = useState(false);
+  const [premiumAtivado, setPremiumAtivado] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const pararPoll = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    setAguardandoPagamento(false);
+  }, []);
+
+  const verificarPagamento = useCallback(async () => {
+    const res = await fetch('/api/billing/sync', { method: 'POST' });
+    const data = (await res.json()) as BillingStatusResponse & { ok?: boolean };
+    if (data.premium) {
+      setPremiumAtivado(true);
+      pararPoll();
+      await updateSession();
+      return true;
+    }
+    if (data.pendingPayment?.pix && !checkout?.pix?.encodedImage) {
+      setCheckout((prev) =>
+        prev
+          ? {
+              ...prev,
+              pix: data.pendingPayment?.pix,
+              invoiceUrl: data.pendingPayment?.invoiceUrl ?? prev.invoiceUrl,
+              bankSlipUrl: data.pendingPayment?.bankSlipUrl ?? prev.bankSlipUrl,
+            }
+          : prev,
+      );
+    }
+    return false;
+  }, [checkout?.pix?.encodedImage, pararPoll, updateSession]);
 
   useEffect(() => {
     if (params.get('checkout') === 'ok') {
@@ -40,6 +88,19 @@ export default function PrecosPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!checkout || premiumAtivado) return;
+
+    setAguardandoPagamento(true);
+    void verificarPagamento();
+
+    pollRef.current = setInterval(() => {
+      void verificarPagamento();
+    }, 5000);
+
+    return () => pararPoll();
+  }, [checkout, premiumAtivado, pararPoll, verificarPagamento]);
+
   async function assinar(planoId: string) {
     if (!session) {
       signIn('google', { callbackUrl: '/precos' });
@@ -48,6 +109,8 @@ export default function PrecosPage() {
     setLoading(planoId);
     setErro('');
     setCheckout(null);
+    setPremiumAtivado(false);
+    pararPoll();
     try {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
@@ -78,6 +141,15 @@ export default function PrecosPage() {
         </p>
       )}
 
+      {premiumAtivado && (
+        <p className="rounded-lg border border-emerald-700/40 bg-emerald-950/30 p-4 text-sm text-emerald-100">
+          Pagamento confirmado! Seu plano Premium está ativo.{' '}
+          <Link href="/dashboard" className="font-semibold underline">
+            Ir ao Dashboard
+          </Link>
+        </p>
+      )}
+
       <Disclaimer />
 
       <label className="block max-w-xs text-xs text-slate-400">
@@ -87,10 +159,12 @@ export default function PrecosPage() {
           onChange={(e) => setMetodo(e.target.value as typeof metodo)}
           className="input mt-1"
         >
-          <option value="pix">PIX</option>
-          <option value="boleto">Boleto</option>
-          <option value="credit_card">Cartão de crédito</option>
+          <option value="pix">PIX (confirmação em minutos)</option>
+          <option value="boleto">Boleto bancário</option>
         </select>
+        <span className="mt-1 block text-[11px] text-slate-500">
+          Cartão de crédito: disponível pelo link da fatura Asaas após gerar a cobrança.
+        </span>
       </label>
 
       <PlanosSection modo="precos" onAssinar={assinar} assinandoId={loading} />
@@ -104,10 +178,15 @@ export default function PrecosPage() {
         </p>
       )}
 
-      {checkout && (
+      {checkout && !premiumAtivado && (
         <div className="card space-y-3 border-brand-600/30">
           <p className="text-sm font-semibold text-brand-300">Conclua o pagamento</p>
           <p className="text-xs text-slate-400">{checkout.message}</p>
+          {aguardandoPagamento && (
+            <p className="text-xs text-amber-300/90">
+              Aguardando confirmação do Asaas… esta página atualiza automaticamente.
+            </p>
+          )}
           {checkout.pix?.encodedImage && (
             <div className="space-y-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -138,9 +217,12 @@ export default function PrecosPage() {
                 Boleto
               </a>
             )}
+            <button type="button" onClick={() => void verificarPagamento()} className="btn-secondary text-xs">
+              Já paguei — verificar agora
+            </button>
           </div>
           <p className="text-[11px] text-slate-500">
-            Após confirmação pelo Asaas, o premium é liberado automaticamente (pode levar alguns minutos).
+            Após confirmação pelo Asaas, o premium é liberado automaticamente (PIX: geralmente 1–5 minutos).
           </p>
         </div>
       )}

@@ -2,12 +2,14 @@ import { prisma } from '@/lib/db';
 import {
   buscarPagamentoAsaas,
   cancelarAssinaturaAsaas,
-  mapAsaasMetodo,
-  mapAsaasPaymentStatus,
 } from './asaas-client';
-import { getPlanoById } from './plan-service';
-import { lockUserToFree, syncSubscriptionAccess, unlockUserPremium } from './sync-access';
+import { lockUserToFree, syncSubscriptionAccess } from './sync-access';
 import { parseExternalReference } from './checkout';
+import {
+  activatePremiumFromAsaasPayment,
+  isAsaasPaymentPaid,
+  salvarPagamentoAsaasLocal,
+} from './payment-activation';
 
 interface AsaasWebhookPayload {
   id?: string;
@@ -36,12 +38,6 @@ interface AsaasWebhookPayload {
   };
 }
 
-function addMonths(date: Date, months = 1) {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
-  return d;
-}
-
 async function findUserByGateway(customerId: string, externalReference?: string) {
   const ref = parseExternalReference(externalReference);
   if (ref?.userId) {
@@ -56,65 +52,12 @@ async function findUserByGateway(customerId: string, externalReference?: string)
   return sub?.user ?? null;
 }
 
-async function upsertPaymentFromAsaas(
-  userId: string,
-  payment: NonNullable<AsaasWebhookPayload['payment']>,
-  planoId?: string,
-) {
-  const status = mapAsaasPaymentStatus(payment.status);
-  const sub = await prisma.subscription.findUnique({ where: { userId } });
-
-  return prisma.payment.upsert({
-    where: { gatewayPaymentId: payment.id },
-    create: {
-      userId,
-      subscriptionId: sub?.id,
-      planoId: planoId ?? sub?.planoId ?? undefined,
-      gateway: 'asaas',
-      gatewayPaymentId: payment.id,
-      valor: payment.value,
-      status,
-      metodo: mapAsaasMetodo(payment.billingType),
-      dueDate: payment.dueDate ? new Date(payment.dueDate) : undefined,
-      paidAt: payment.paymentDate ? new Date(payment.paymentDate) : undefined,
-      gatewayInvoiceUrl: payment.invoiceUrl,
-      gatewayBankSlipUrl: payment.bankSlipUrl,
-    },
-    update: {
-      status,
-      metodo: mapAsaasMetodo(payment.billingType),
-      paidAt: payment.paymentDate ? new Date(payment.paymentDate) : undefined,
-      gatewayInvoiceUrl: payment.invoiceUrl,
-      gatewayBankSlipUrl: payment.bankSlipUrl,
-    },
-  });
-}
-
 async function handlePaymentConfirmed(userId: string, payment: NonNullable<AsaasWebhookPayload['payment']>) {
-  const ref = parseExternalReference(payment.externalReference);
-  const sub = await prisma.subscription.findUnique({ where: { userId } });
-  const planoId = ref?.planoId ?? sub?.planoId ?? undefined;
-  const plano = planoId ? await getPlanoById(planoId) : null;
-
-  await upsertPaymentFromAsaas(userId, payment, planoId);
-
-  const renovacao = payment.dueDate ? addMonths(new Date(payment.dueDate), 1) : addMonths(new Date());
-
-  await unlockUserPremium(userId, {
-    planoSlug: plano?.slug ?? sub?.plano ?? 'premium',
-    planoId: plano?.id ?? planoId,
-    valor: payment.value,
-    periodicidade: plano?.periodicidade ?? sub?.periodicidade ?? 'monthly',
-    gateway: 'asaas',
-    gatewayCustomerId: sub?.gatewayCustomerId ?? payment.customer,
-    gatewaySubscriptionId: sub?.gatewaySubscriptionId ?? payment.subscription,
-    dataRenovacao: renovacao,
-    currentPeriodEnd: renovacao,
-  });
+  await activatePremiumFromAsaasPayment(userId, payment);
 }
 
 async function handlePaymentOverdue(userId: string, payment: NonNullable<AsaasWebhookPayload['payment']>) {
-  await upsertPaymentFromAsaas(userId, payment);
+  await salvarPagamentoAsaasLocal(userId, payment);
   await syncSubscriptionAccess({
     userId,
     status: 'past_due',
@@ -131,14 +74,10 @@ async function handlePaymentOverdue(userId: string, payment: NonNullable<AsaasWe
 }
 
 async function handlePaymentReceived(userId: string, payment: NonNullable<AsaasWebhookPayload['payment']>) {
-  await upsertPaymentFromAsaas(userId, payment);
-  await prisma.payment.updateMany({
-    where: { gatewayPaymentId: payment.id },
-    data: {
-      status: 'received',
-      paidAt: payment.paymentDate ? new Date(payment.paymentDate) : new Date(),
-    },
-  });
+  await salvarPagamentoAsaasLocal(userId, payment);
+  if (isAsaasPaymentPaid(payment.status)) {
+    await activatePremiumFromAsaasPayment(userId, payment);
+  }
 }
 
 async function handleSubscriptionDeleted(userId: string) {
@@ -154,7 +93,10 @@ async function handleSubscriptionDeleted(userId: string) {
 }
 
 export async function handleAsaasWebhook(rawBody: string, accessToken: string | null) {
-  const expected = process.env.ASAAS_WEBHOOK_TOKEN;
+  const expected = process.env.ASAAS_WEBHOOK_TOKEN?.trim();
+  if (process.env.ASAAS_ENV === 'production' && !expected) {
+    throw new Error('ASAAS_WEBHOOK_TOKEN obrigatório em produção.');
+  }
   if (expected && accessToken !== expected) {
     throw new Error('Token de webhook Asaas inválido.');
   }
@@ -195,13 +137,10 @@ export async function handleAsaasWebhook(rawBody: string, accessToken: string | 
     switch (eventType) {
       case 'PAYMENT_CONFIRMED':
       case 'PAYMENT_RECEIVED':
-        if (eventType === 'PAYMENT_CONFIRMED') {
+        if (eventType === 'PAYMENT_CONFIRMED' || isAsaasPaymentPaid(payment.status)) {
           await handlePaymentConfirmed(user.id, payment);
         } else {
           await handlePaymentReceived(user.id, payment);
-          if (['RECEIVED', 'CONFIRMED'].includes(payment.status)) {
-            await handlePaymentConfirmed(user.id, payment);
-          }
         }
         break;
       case 'PAYMENT_OVERDUE':
@@ -209,11 +148,11 @@ export async function handleAsaasWebhook(rawBody: string, accessToken: string | 
         break;
       case 'PAYMENT_DELETED':
       case 'PAYMENT_REFUNDED':
-        await upsertPaymentFromAsaas(user.id, payment);
+        await salvarPagamentoAsaasLocal(user.id, payment);
         await lockUserToFree(user.id, `Cobrança ${eventType}`);
         break;
       default:
-        await upsertPaymentFromAsaas(user.id, payment);
+        await salvarPagamentoAsaasLocal(user.id, payment);
     }
   }
 

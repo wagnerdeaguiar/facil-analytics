@@ -6,11 +6,13 @@ import {
   listarPagamentosAssinatura,
   mapAsaasMetodo,
   mapAsaasPaymentStatus,
-  obterPixQrCode,
+  atualizarClienteAsaas,
 } from './asaas-client';
 import { getPlanoById, getPlanoBySlug } from './plan-service';
 import { syncSubscriptionAccess } from './sync-access';
 import { cancelExistingAsaasSubscription } from './subscription-change';
+import { fetchPixWithRetry } from './sync-payment';
+import { SITE_NAME } from '@/lib/site-identity';
 import type { CheckoutResult, MetodoPagamento } from './types';
 
 function parseExternalReference(ref?: string) {
@@ -40,6 +42,14 @@ async function ensureAsaasCustomer(userId: string) {
   });
 
   if (sub.gatewayCustomerId && sub.gateway === 'asaas') {
+    await atualizarClienteAsaas(sub.gatewayCustomerId, {
+      name: user.name ?? user.email.split('@')[0],
+      email: user.email,
+      cpfCnpj: cpf,
+      mobilePhone: user.telefone ?? undefined,
+    }).catch(() => {
+      /* cliente pode estar desatualizado no Asaas — segue com id existente */
+    });
     return { user, customerId: sub.gatewayCustomerId, sub };
   }
 
@@ -115,7 +125,13 @@ export async function createBillingCheckout(
   }
 
   if (!isAsaasConfigured()) {
-    throw new Error('Gateway Asaas não configurado. Defina ASAAS_API_KEY no .env.');
+    throw new Error('Gateway Asaas não configurado. Defina ASAAS_API_KEY na Vercel.');
+  }
+
+  if (metodo === 'credit_card') {
+    throw new Error(
+      'Pagamento com cartão: use PIX ou boleto, ou abra a fatura Asaas após gerar a cobrança (link “Abrir fatura”).',
+    );
   }
 
   await cancelExistingAsaasSubscription(userId);
@@ -125,7 +141,7 @@ export async function createBillingCheckout(
   const asaasSub = await criarAssinaturaAsaas({
     customerId,
     valor: plano.valor,
-    descricao: `${plano.nome} — Fácil Analytics`,
+    descricao: `${plano.nome} — ${SITE_NAME}`,
     metodo,
     externalReference: `userId:${userId}|planoId:${plano.id}`,
   });
@@ -160,15 +176,13 @@ export async function createBillingCheckout(
 
   let pix: CheckoutResult['pix'];
   if (primeiro && mapAsaasMetodo(primeiro.billingType) === 'pix') {
-    try {
-      const qr = await obterPixQrCode(primeiro.id);
+    const qr = await fetchPixWithRetry(primeiro.id);
+    if (qr) {
       pix = {
         encodedImage: qr.encodedImage,
         payload: qr.payload,
         expirationDate: qr.expirationDate,
       };
-    } catch {
-      /* PIX pode não estar disponível imediatamente */
     }
   }
 
