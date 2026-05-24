@@ -160,7 +160,7 @@ export default async function LandingPage() {
               {
                 icon: Calendar,
                 label: 'Sorteios',
-                value: '3× por semana',
+                value: '6× por semana',
               },
               {
                 icon: Users,
@@ -254,7 +254,7 @@ export default async function LandingPage() {
               },
               {
                 title: 'Sorteios frequentes',
-                text: 'Três concursos por semana (segunda, terça e sexta). Histórico rico para análise estatística.',
+                text: 'Seis concursos por semana (segunda a sábado). Histórico rico para análise estatística.',
               },
               {
                 title: 'Milhões de combinações',
