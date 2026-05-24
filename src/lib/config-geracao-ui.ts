@@ -46,6 +46,7 @@ export interface GeradorPrefsSalvas {
   maxDezenasIguais: number;
   quantidade?: number;
   numerosPorAposta?: number;
+  updatedAt?: string;
 }
 
 const LABELS: Record<string, string> = {
@@ -282,16 +283,28 @@ function isConfigGeracaoUI(value: unknown): value is ConfigGeracaoUI {
   return typeof score === 'number' && Number.isFinite(score);
 }
 
-export function salvarGeradorPrefs(prefs: GeradorPrefsSalvas) {
-  if (typeof window === 'undefined') return;
-  const normalizado: GeradorPrefsSalvas = {
-    ...prefs,
-    config: normalizarConfigGeracaoUI(prefs.config),
-    origemBase: prefs.origemBase || '20D',
-    maxDezenasIguais: parseNumero(prefs.maxDezenasIguais, 13),
-  };
-  localStorage.setItem(PREFS_KEY, JSON.stringify(normalizado));
-  salvarConfigLocal(normalizado.config);
+export function salvarGeradorPrefs(prefs: GeradorPrefsSalvas): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const normalizado: GeradorPrefsSalvas = {
+      ...prefs,
+      config: normalizarConfigGeracaoUI(prefs.config),
+      origemBase: prefs.origemBase || '20D',
+      maxDezenasIguais: parseNumero(prefs.maxDezenasIguais, 13),
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(PREFS_KEY, JSON.stringify(normalizado));
+    salvarConfigLocal(normalizado.config);
+    return true;
+  } catch (e) {
+    console.error('Falha ao salvar parâmetros no navegador:', e);
+    return false;
+  }
+}
+
+/** Carrega prefs locais de forma síncrona (use no estado inicial do Gerador). */
+export function lerPrefsLocaisIniciais(): GeradorPrefsSalvas | null {
+  return carregarGeradorPrefs();
 }
 
 export function carregarGeradorPrefs(): GeradorPrefsSalvas | null {
@@ -307,6 +320,7 @@ export function carregarGeradorPrefs(): GeradorPrefsSalvas | null {
       maxDezenasIguais: parseNumero(parsed.maxDezenasIguais, 13),
       quantidade: typeof parsed.quantidade === 'number' ? parsed.quantidade : undefined,
       numerosPorAposta: typeof parsed.numerosPorAposta === 'number' ? parsed.numerosPorAposta : undefined,
+      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : undefined,
     };
   } catch {
     return null;

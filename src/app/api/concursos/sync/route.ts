@@ -1,12 +1,12 @@
 export { dynamic } from '@/lib/route-config';
 
 import { NextResponse } from 'next/server';
-import { requirePremium } from '@/lib/api-auth';
+import { requireAdmin } from '@/lib/api-auth';
 import { sincronizarConcursosDesdeUltimo } from '@/lib/services/sync-concursos';
 
 /** Sincroniza concursos novos a partir do último gravado no banco */
 export async function POST() {
-  const auth = await requirePremium();
+  const auth = await requireAdmin();
   if (auth.response) return auth.response;
 
   try {

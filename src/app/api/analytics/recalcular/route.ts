@@ -1,11 +1,11 @@
 export { dynamic } from '@/lib/route-config';
 
 import { NextResponse } from 'next/server';
-import { requirePremium } from '@/lib/api-auth';
+import { requireAdmin } from '@/lib/api-auth';
 import { recalcularEstatisticasGlobais } from '@/lib/services/analytics';
 
 export async function POST() {
-  const auth = await requirePremium();
+  const auth = await requireAdmin();
   if (auth.response) return auth.response;
 
   try {

@@ -1,7 +1,7 @@
 export { dynamic } from '@/lib/route-config';
 
 import { NextResponse } from 'next/server';
-import { requirePremium } from '@/lib/api-auth';
+import { requireAdmin } from '@/lib/api-auth';
 import { caminhoLotofacilXlsx } from '@/lib/lotofacil/excel-path';
 import {
   importarConcursosLista,
@@ -13,7 +13,7 @@ import {
 const DEFAULT_PATH = caminhoLotofacilXlsx();
 
 export async function POST(request: Request) {
-  const auth = await requirePremium();
+  const auth = await requireAdmin();
   if (auth.response) return auth.response;
 
   try {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   return NextResponse.json(
-    { error: 'Importação disponível apenas no Plano Premium.' },
+    { error: 'Importação restrita a administradores.' },
     { status: 403 },
   );
 }

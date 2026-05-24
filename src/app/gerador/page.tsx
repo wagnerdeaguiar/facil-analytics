@@ -14,7 +14,9 @@ import {
   salvarGeradorPrefs,
   uiToConfigGeracao,
   uiToRegrasSequencia,
+  lerPrefsLocaisIniciais,
   type ConfigGeracaoUI,
+  type GeradorPrefsSalvas,
 } from '@/lib/config-geracao-ui';
 import { getPerfilConfig, type PerfilId } from '@/lib/lotofacil/perfis';
 import {
@@ -48,18 +50,38 @@ interface Jogo {
 
 type Tab = 'gerar' | 'parametros';
 
+function parseCampoNumero(raw: string, atual: number): number {
+  if (raw.trim() === '') return atual;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : atual;
+}
+
+function escolherPrefsMaisRecentes(
+  local: GeradorPrefsSalvas | null,
+  servidor: GeradorPrefsSalvas | null,
+): GeradorPrefsSalvas | null {
+  if (!local) return servidor;
+  if (!servidor) return local;
+  const tl = local.updatedAt ? Date.parse(local.updatedAt) : 0;
+  const ts = servidor.updatedAt ? Date.parse(servidor.updatedAt) : 0;
+  return ts >= tl ? servidor : local;
+}
+
 export default function GeradorPage() {
-  const { data: session } = useSession();
-  const premium = isPremiumStatus(session?.user?.subscriptionStatus);
+  const { data: session, status: sessionStatus } = useSession();
+  const sessionPronta = sessionStatus !== 'loading';
+  const premium = sessionPronta && isPremiumStatus(session?.user?.subscriptionStatus);
   const tabelaAposta = useTabelaAposta();
   const apostaInfoAtual = (n: number) => infoApostaComTabela(n, tabelaAposta);
   const opcoesDezenas = ([15, 16, 17, 18, 19, 20] as NumerosPorAposta[]);
   const [tab, setTab] = useState<Tab>('gerar');
   const [config, setConfig] = useState<ConfigGeracaoUI>(configPadraoUI());
-  const [quantidade, setQuantidade] = useState(premium ? 10 : FREE_MAX_JOGOS);
+  const [quantidade, setQuantidade] = useState(FREE_MAX_JOGOS);
   const [origemBase, setOrigemBase] = useState('20D');
   const [maxIguais, setMaxIguais] = useState(13);
-  const [numerosPorAposta, setNumerosPorAposta] = useState<NumerosPorAposta>(15);
+  const [numerosPorAposta, setNumerosPorAposta] = useState<NumerosPorAposta>(
+    FREE_MAX_DEZENAS as NumerosPorAposta,
+  );
   const [jogos, setJogos] = useState<Jogo[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
@@ -71,19 +93,41 @@ export default function GeradorPage() {
   const [mostrarPrioridade, setMostrarPrioridade] = useState(false);
   const [modoPrioridade, setModoPrioridade] = useState<'fixa' | 'excluida'>('fixa');
   const [dezenasBase, setDezenasBase] = useState<Set<number>>(new Set());
-  const prefsInicializadas = useRef(false);
+  const prefsProntasParaSalvar = useRef(false);
+  const perfilUrlAplicado = useRef(false);
+
+  const aplicarPrefs = useCallback((prefs: GeradorPrefsSalvas) => {
+    setConfig(prefs.config);
+    setOrigemBase(prefs.origemBase);
+    setMaxIguais(prefs.maxDezenasIguais);
+    if (prefs.quantidade != null) setQuantidade(prefs.quantidade);
+    if (prefs.numerosPorAposta != null)
+      setNumerosPorAposta(prefs.numerosPorAposta as NumerosPorAposta);
+  }, []);
 
   const persistirPrefs = useCallback(
-    (cfg: ConfigGeracaoUI, base: string, max: number, qtd: number, nums: NumerosPorAposta) => {
-      salvarGeradorPrefs({
+    async (cfg: ConfigGeracaoUI, base: string, max: number, qtd: number, nums: NumerosPorAposta) => {
+      const payload: GeradorPrefsSalvas = {
         config: cfg,
         origemBase: base,
         maxDezenasIguais: max,
         quantidade: qtd,
         numerosPorAposta: nums,
-      });
+      };
+      salvarGeradorPrefs(payload);
+      if (session?.user?.id) {
+        try {
+          await fetch('/api/gerador/prefs', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        } catch (e) {
+          console.error('Falha ao salvar parâmetros na conta:', e);
+        }
+      }
     },
-    [],
+    [session?.user?.id],
   );
 
   const aplicarPerfilPorId = useCallback(
@@ -94,18 +138,12 @@ export default function GeradorPage() {
       setConfig(ui);
       setOrigemBase(base);
       setMaxIguais(perfil.maxDezenasIguais);
-      salvarGeradorPrefs({
-        config: ui,
-        origemBase: base,
-        maxDezenasIguais: perfil.maxDezenasIguais,
-        quantidade,
-        numerosPorAposta,
-      });
+      void persistirPrefs(ui, base, perfil.maxDezenasIguais, quantidade, numerosPorAposta);
       setInfo(
         `Perfil "${perfil.nome}" aplicado · Base ${base} · Score mín. ${perfil.scoreMinimo} · Máx. iguais ${perfil.maxDezenasIguais}`,
       );
     },
-    [mediaSoma, quantidade, numerosPorAposta],
+    [mediaSoma, quantidade, numerosPorAposta, persistirPrefs],
   );
 
   const carregarDefaults = useCallback(() => {
@@ -118,25 +156,14 @@ export default function GeradorPage() {
       .then((r) => r.json())
       .then((d) => {
         setMediaSoma(d.mediaSoma);
-        if (perfilIdValido(perfilUrl)) {
+        if (perfilIdValido(perfilUrl) && !perfilUrlAplicado.current) {
+          perfilUrlAplicado.current = true;
           aplicarPerfilPorId(perfilUrl, d.mediaSoma);
           setTab('parametros');
-          prefsInicializadas.current = true;
-        } else if (!prefsInicializadas.current) {
-          const prefs = carregarGeradorPrefs();
-          if (prefs) {
-            setConfig(prefs.config);
-            setOrigemBase(prefs.origemBase);
-            setMaxIguais(prefs.maxDezenasIguais);
-            if (prefs.quantidade != null) setQuantidade(prefs.quantidade);
-            if (prefs.numerosPorAposta != null)
-              setNumerosPorAposta(prefs.numerosPorAposta as NumerosPorAposta);
-          } else {
-            const salvo = carregarConfigLocal();
-            if (salvo) setConfig(salvo);
-            else if (d.configPremium) setConfig(d.configPremium);
-          }
-          prefsInicializadas.current = true;
+        } else if (!perfilUrlAplicado.current && !lerPrefsLocaisIniciais()) {
+          const salvo = carregarConfigLocal();
+          if (salvo) setConfig(salvo);
+          else if (d.configPremium) setConfig(d.configPremium);
         }
         if (d.ultimoConcurso) setUltimoConcurso(d.ultimoConcurso);
         if (!perfilIdValido(perfilUrl)) {
@@ -149,12 +176,14 @@ export default function GeradorPage() {
     origemBase === '18D' ? 18 : origemBase === '19D' ? 19 : origemBase === '20D' ? 20 : 20;
 
   useEffect(() => {
+    if (!sessionPronta) return;
     if (premium) return;
     setQuantidade((q) => Math.min(q, FREE_MAX_JOGOS));
     setNumerosPorAposta(FREE_MAX_DEZENAS as NumerosPorAposta);
-  }, [premium]);
+  }, [premium, sessionPronta]);
 
   useEffect(() => {
+    if (!sessionPronta) return;
     if (!premium) {
       if (numerosPorAposta !== FREE_MAX_DEZENAS) setNumerosPorAposta(FREE_MAX_DEZENAS as NumerosPorAposta);
       return;
@@ -162,7 +191,53 @@ export default function GeradorPage() {
     if (numerosPorAposta > maxDezenasBase) {
       setNumerosPorAposta(maxDezenasBase as NumerosPorAposta);
     }
-  }, [maxDezenasBase, numerosPorAposta, premium]);
+  }, [maxDezenasBase, numerosPorAposta, premium, sessionPronta]);
+
+  useEffect(() => {
+    if (!sessionPronta) return;
+
+    let cancelled = false;
+    const perfilUrl =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('perfil')
+        : null;
+    if (perfilIdValido(perfilUrl)) {
+      prefsProntasParaSalvar.current = true;
+      return;
+    }
+
+    async function sincronizarPrefs() {
+      const local = lerPrefsLocaisIniciais();
+      if (local && !cancelled) aplicarPrefs(local);
+
+      if (session?.user?.id) {
+        try {
+          const res = await fetch('/api/gerador/prefs');
+          if (!res.ok || cancelled) return;
+          const data = await res.json();
+          if (cancelled) return;
+          const servidor = data.prefs as GeradorPrefsSalvas | null;
+          if (servidor) {
+            const atual = carregarGeradorPrefs();
+            const escolhida = escolherPrefsMaisRecentes(atual, servidor);
+            if (escolhida) {
+              aplicarPrefs(escolhida);
+              salvarGeradorPrefs(escolhida);
+            }
+          }
+        } catch (e) {
+          console.error('Falha ao carregar parâmetros da conta:', e);
+        }
+      }
+
+      if (!cancelled) prefsProntasParaSalvar.current = true;
+    }
+
+    void sincronizarPrefs();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionPronta, session?.user?.id, aplicarPrefs]);
 
   useEffect(() => {
     if (origemBase === 'Livre') {
@@ -191,14 +266,18 @@ export default function GeradorPage() {
   }
 
   function salvarParametros() {
-    persistirPrefs(config, origemBase, maxIguais, quantidade, numerosPorAposta);
-    setInfo('Parâmetros salvos no navegador.');
+    void persistirPrefs(config, origemBase, maxIguais, quantidade, numerosPorAposta);
+    setInfo(
+      session?.user?.id
+        ? 'Parâmetros salvos na sua conta.'
+        : 'Parâmetros salvos no navegador.',
+    );
   }
 
   useEffect(() => {
-    if (!prefsInicializadas.current) return;
+    if (!prefsProntasParaSalvar.current) return;
     const timer = window.setTimeout(() => {
-      persistirPrefs(config, origemBase, maxIguais, quantidade, numerosPorAposta);
+      void persistirPrefs(config, origemBase, maxIguais, quantidade, numerosPorAposta);
     }, 500);
     return () => window.clearTimeout(timer);
   }, [config, origemBase, maxIguais, quantidade, numerosPorAposta, persistirPrefs]);
@@ -403,7 +482,11 @@ export default function GeradorPage() {
             <button type="button" onClick={salvarParametros} className="btn-secondary">
               Salvar parâmetros agora
             </button>
-            <p className="text-xs text-slate-500">Alterações são salvas automaticamente neste navegador.</p>
+            <p className="text-xs text-slate-500">
+              {session?.user?.id
+                ? 'Alterações são salvas automaticamente na sua conta e neste navegador.'
+                : 'Alterações são salvas automaticamente neste navegador. Entre na conta para sincronizar entre dispositivos.'}
+            </p>
           </article>
           <ParametrosGeracao config={config} onChange={onConfigChange} />
         </>
@@ -470,7 +553,14 @@ export default function GeradorPage() {
                   type="number"
                   value={config.scoreMinimo}
                   onChange={(e) =>
-                    setConfig({ ...config, scoreMinimo: Number(e.target.value), perfilId: null })
+                    setConfig({
+                      ...config,
+                      scoreMinimo: Math.min(
+                        100,
+                        Math.max(0, parseCampoNumero(e.target.value, config.scoreMinimo)),
+                      ),
+                      perfilId: null,
+                    })
                   }
                   className="input mt-1"
                 />

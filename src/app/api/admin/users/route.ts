@@ -28,7 +28,15 @@ export async function GET(request: Request) {
     },
     orderBy: { createdAt: 'desc' },
     take: 100,
-    include: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      subscriptionStatus: true,
+      isBlocked: true,
+      createdAt: true,
+      lastLoginAt: true,
       subscription: true,
       _count: { select: { jogos: true } },
     },

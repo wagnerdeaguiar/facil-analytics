@@ -1,14 +1,14 @@
 export { dynamic } from '@/lib/route-config';
 
 import { NextResponse } from 'next/server';
-import { requirePremium } from '@/lib/api-auth';
+import { requireAdmin } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { concursoToDbFields } from '@/lib/lotofacil/import';
 import { recalcularEstatisticasGlobais } from '@/lib/services/analytics';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
 
 export async function POST(request: Request) {
-  const auth = await requirePremium();
+  const auth = await requireAdmin();
   if (auth.response) return auth.response;
 
   try {

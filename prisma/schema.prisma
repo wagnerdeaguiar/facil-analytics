@@ -30,6 +30,7 @@ model User {
   perfis        PerfilGeracao[]
   auditLogs     AuditLog[]
   payments      Payment[]
+  simulacoes    Simulacao[]
 }
 
 model Account {
@@ -277,6 +278,8 @@ model JogoGerado {
 
 model Simulacao {
   id               String      @id @default(cuid())
+  userId           String?
+  user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   jogoId           String?
   jogo             JogoGerado? @relation(fields: [jogoId], references: [id], onDelete: SetNull)
   dezenasJogo      Int[]
@@ -287,6 +290,7 @@ model Simulacao {
   loteId           String?
   createdAt        DateTime    @default(now())
 
+  @@index([userId])
   @@index([loteId])
   @@index([concursoTestado])
 }

@@ -12,6 +12,7 @@ import { prisma } from '@/lib/db';
 export async function POST(request: Request) {
   const auth = await requirePremium();
   if (auth.response) return auth.response;
+  const session = auth.session;
 
   try {
     const body = await request.json();
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       await prisma.simulacao.createMany({
         data: amostra.flatMap((j) =>
           filtrados.slice(-50).map((c) => ({
+            userId: session.user.id,
             dezenasJogo: j.dezenas,
             concursoTestado: c.numeroConcurso,
             acertos: j.dezenas.filter((d) => c.dezenas.includes(d)).length,

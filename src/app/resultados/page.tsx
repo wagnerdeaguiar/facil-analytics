@@ -61,7 +61,7 @@ export default function ResultadosPage() {
       <header>
         <h1 className="text-2xl font-bold">Resultados</h1>
         <p className="text-sm text-slate-400">
-          Histórico importado com estatísticas por concurso. Importe ou atualize a base na seção abaixo.
+          Histórico de sorteios com estatísticas por concurso. Use os filtros abaixo para consultar.
         </p>
       </header>
 

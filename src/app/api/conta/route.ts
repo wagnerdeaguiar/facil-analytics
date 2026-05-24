@@ -1,18 +1,16 @@
 export { dynamic } from '@/lib/route-config';
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { listarPagamentosUsuario } from '@/lib/billing/faturamento-service';
 import { resolvePlanLimitsForUser } from '@/lib/billing/plan-service';
 import { isPremiumStatus } from '@/lib/subscription';
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+  const session = auth.session;
 
   const [user, sub, pagamentos, limites] = await Promise.all([
     prisma.user.findUnique({
@@ -51,10 +49,9 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+  const session = auth.session;
 
   const body = await request.json();
   const cpf = body.cpf ? String(body.cpf).replace(/\D/g, '') : undefined;
@@ -71,6 +68,14 @@ export async function PATCH(request: Request) {
       ...(telefone !== undefined ? { telefone } : {}),
     },
     select: { cpf: true, telefone: true },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      eventType: 'conta_update',
+      description: 'Dados da conta atualizados',
+    },
   });
 
   return NextResponse.json({ ok: true, cpf: user.cpf, telefone: user.telefone });

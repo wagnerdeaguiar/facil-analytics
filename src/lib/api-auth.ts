@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { isPremiumStatus } from '@/lib/subscription';
 import type { Session } from 'next-auth';
 
@@ -8,15 +9,40 @@ type AuthResult =
   | { session: Session; response: null }
   | { session: null; response: NextResponse };
 
-/** Exige usuário logado (produção e dev). */
+const MSG_ACESSO_NEGADO = 'Acesso negado.';
+const MSG_CONTA_SUSPENSA = 'Conta suspensa. Entre em contato com o suporte.';
+const MSG_LOGIN = 'Faça login para continuar.';
+
+/** Revalida bloqueio e papel no banco (evita token desatualizado). */
+async function carregarUsuarioSeguro(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, isBlocked: true, subscriptionStatus: true },
+  });
+}
+
+/** Exige usuário logado, ativo e não bloqueado. */
 export async function requireSession(): Promise<AuthResult> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return {
       session: null,
-      response: NextResponse.json({ error: 'Faça login para continuar.' }, { status: 401 }),
+      response: NextResponse.json({ error: MSG_LOGIN }, { status: 401 }),
     };
   }
+
+  const dbUser = await carregarUsuarioSeguro(session.user.id);
+  if (!dbUser || dbUser.isBlocked) {
+    return {
+      session: null,
+      response: NextResponse.json({ error: MSG_CONTA_SUSPENSA }, { status: 403 }),
+    };
+  }
+
+  session.user.role = dbUser.role;
+  session.user.subscriptionStatus = dbUser.subscriptionStatus;
+  session.user.isBlocked = false;
+
   return { session, response: null };
 }
 
@@ -36,7 +62,7 @@ export async function requirePremium(): Promise<AuthResult> {
   return auth;
 }
 
-/** Exige papel admin. */
+/** Exige papel admin (validado no banco). */
 export async function requireAdmin(): Promise<AuthResult> {
   const auth = await requireSession();
   if (auth.response) return auth;
@@ -47,4 +73,13 @@ export async function requireAdmin(): Promise<AuthResult> {
     };
   }
   return auth;
+}
+
+/** Impede acesso a recurso de outro usuário (LGPD). */
+export function denyIfNotOwner(
+  sessionUserId: string,
+  resourceUserId: string | null | undefined,
+): NextResponse | null {
+  if (!resourceUserId || resourceUserId === sessionUserId) return null;
+  return NextResponse.json({ error: MSG_ACESSO_NEGADO }, { status: 403 });
 }
