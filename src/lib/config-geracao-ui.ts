@@ -44,6 +44,8 @@ export interface GeradorPrefsSalvas {
   config: ConfigGeracaoUI;
   origemBase: string;
   maxDezenasIguais: number;
+  quantidade?: number;
+  numerosPorAposta?: number;
 }
 
 const LABELS: Record<string, string> = {
@@ -207,20 +209,89 @@ export function uiToRegrasSequencia(ui: ConfigGeracaoUI) {
 const STORAGE_KEY = 'lotofacil-config-ui';
 const PREFS_KEY = 'lotofacil-gerador-prefs';
 
+function parseNumero(val: unknown, fallback: number): number {
+  const n = typeof val === 'number' ? val : Number(val);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function normalizarCriterioUI(c: Partial<CriterioUI> | undefined, defaults: CriterioUI): CriterioUI {
+  return {
+    nome: c?.nome ?? defaults.nome,
+    label: c?.label ?? defaults.label,
+    min: parseNumero(c?.min, defaults.min),
+    max: parseNumero(c?.max, defaults.max),
+    alvo: parseNumero(c?.alvo, defaults.alvo),
+    obrigatorio: c?.obrigatorio ?? defaults.obrigatorio,
+    ativo: c?.ativo !== false,
+  };
+}
+
+/** Garante estrutura completa ao ler/gravar localStorage (evita NaN/null quebrando reload). */
+export function normalizarConfigGeracaoUI(raw: unknown): ConfigGeracaoUI {
+  const padrao = configPadraoUI();
+  if (!raw || typeof raw !== 'object') return padrao;
+
+  const r = raw as Partial<ConfigGeracaoUI>;
+  const criterios = padrao.criterios.map((def) => {
+    const salvo = Array.isArray(r.criterios) ? r.criterios.find((c) => c?.nome === def.nome) : undefined;
+    return normalizarCriterioUI(salvo, def);
+  });
+
+  const regrasPadrao = padrao.regrasSequencia;
+  const regrasRaw = (r.regrasSequencia ?? {}) as Partial<RegrasSequenciaUI>;
+
+  return {
+    perfilId: perfilIdValido(r.perfilId as string) ? r.perfilId : null,
+    criterios,
+    maiorSeqSorteada: r.maiorSeqSorteada
+      ? normalizarCriterioUI(r.maiorSeqSorteada, padrao.maiorSeqSorteada ?? criterios[0])
+      : padrao.maiorSeqSorteada,
+    maiorSeqAusente: r.maiorSeqAusente
+      ? normalizarCriterioUI(r.maiorSeqAusente, padrao.maiorSeqAusente ?? criterios[0])
+      : padrao.maiorSeqAusente,
+    volanteLinhas: normalizarCriterioUI(r.volanteLinhas, padrao.volanteLinhas!),
+    volanteColunas: normalizarCriterioUI(r.volanteColunas, padrao.volanteColunas!),
+    scoreMinimo: Math.min(100, Math.max(0, parseNumero(r.scoreMinimo, padrao.scoreMinimo))),
+    usarSequenciaAtraso: r.usarSequenciaAtraso !== false,
+    regrasSequencia: {
+      maxDezenasSequenciaGte4: parseNumero(
+        regrasRaw.maxDezenasSequenciaGte4,
+        regrasPadrao.maxDezenasSequenciaGte4,
+      ),
+      maxDezenasSequenciaGte5: parseNumero(
+        regrasRaw.maxDezenasSequenciaGte5,
+        regrasPadrao.maxDezenasSequenciaGte5,
+      ),
+      maxDezenasSequenciaGte6: parseNumero(
+        regrasRaw.maxDezenasSequenciaGte6,
+        regrasPadrao.maxDezenasSequenciaGte6,
+      ),
+      minDezenasAtrasoGte2: parseNumero(regrasRaw.minDezenasAtrasoGte2, regrasPadrao.minDezenasAtrasoGte2),
+      maxDezenasAtrasoGte2: parseNumero(regrasRaw.maxDezenasAtrasoGte2, regrasPadrao.maxDezenasAtrasoGte2),
+      minDezenasAtrasoGte3: parseNumero(regrasRaw.minDezenasAtrasoGte3, regrasPadrao.minDezenasAtrasoGte3),
+      maxDezenasAtrasoGte3: parseNumero(regrasRaw.maxDezenasAtrasoGte3, regrasPadrao.maxDezenasAtrasoGte3),
+    },
+  };
+}
+
 function isConfigGeracaoUI(value: unknown): value is ConfigGeracaoUI {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'criterios' in value &&
-    Array.isArray((value as ConfigGeracaoUI).criterios) &&
-    typeof (value as ConfigGeracaoUI).scoreMinimo === 'number'
-  );
+  if (typeof value !== 'object' || value === null || !('criterios' in value)) return false;
+  const c = value as ConfigGeracaoUI;
+  if (!Array.isArray(c.criterios) || c.criterios.length === 0) return false;
+  const score = (c as { scoreMinimo?: unknown }).scoreMinimo;
+  return typeof score === 'number' && Number.isFinite(score);
 }
 
 export function salvarGeradorPrefs(prefs: GeradorPrefsSalvas) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-  salvarConfigLocal(prefs.config);
+  const normalizado: GeradorPrefsSalvas = {
+    ...prefs,
+    config: normalizarConfigGeracaoUI(prefs.config),
+    origemBase: prefs.origemBase || '20D',
+    maxDezenasIguais: parseNumero(prefs.maxDezenasIguais, 13),
+  };
+  localStorage.setItem(PREFS_KEY, JSON.stringify(normalizado));
+  salvarConfigLocal(normalizado.config);
 }
 
 export function carregarGeradorPrefs(): GeradorPrefsSalvas | null {
@@ -228,17 +299,23 @@ export function carregarGeradorPrefs(): GeradorPrefsSalvas | null {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as GeradorPrefsSalvas;
-    if (!parsed?.config || !isConfigGeracaoUI(parsed.config)) return null;
-    return parsed;
+    const parsed = JSON.parse(raw) as Partial<GeradorPrefsSalvas>;
+    if (!parsed?.config) return null;
+    return {
+      config: normalizarConfigGeracaoUI(parsed.config),
+      origemBase: typeof parsed.origemBase === 'string' ? parsed.origemBase : '20D',
+      maxDezenasIguais: parseNumero(parsed.maxDezenasIguais, 13),
+      quantidade: typeof parsed.quantidade === 'number' ? parsed.quantidade : undefined,
+      numerosPorAposta: typeof parsed.numerosPorAposta === 'number' ? parsed.numerosPorAposta : undefined,
+    };
   } catch {
     return null;
   }
 }
 
 export function salvarConfigLocal(ui: ConfigGeracaoUI) {
-  if (typeof window === 'undefined' || !isConfigGeracaoUI(ui)) return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ui));
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizarConfigGeracaoUI(ui)));
 }
 
 export function carregarConfigLocal(): ConfigGeracaoUI | null {
@@ -246,8 +323,7 @@ export function carregarConfigLocal(): ConfigGeracaoUI | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('lotofacil-config-ui-v2');
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    return isConfigGeracaoUI(parsed) ? parsed : null;
+    return normalizarConfigGeracaoUI(JSON.parse(raw));
   } catch {
     return null;
   }

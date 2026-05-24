@@ -2,6 +2,12 @@
 
 import type { ConfigGeracaoUI, CriterioUI } from '@/lib/config-geracao-ui';
 
+function parseCampoNumero(raw: string, atual: number): number {
+  if (raw.trim() === '') return atual;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : atual;
+}
+
 function CriterioEditor({
   c,
   onChange,
@@ -38,7 +44,7 @@ function CriterioEditor({
           <input
             type="number"
             value={c.min}
-            onChange={(e) => onChange({ ...c, min: Number(e.target.value) })}
+            onChange={(e) => onChange({ ...c, min: parseCampoNumero(e.target.value, c.min) })}
             className="input mt-0.5"
           />
         </label>
@@ -47,7 +53,7 @@ function CriterioEditor({
           <input
             type="number"
             value={c.max}
-            onChange={(e) => onChange({ ...c, max: Number(e.target.value) })}
+            onChange={(e) => onChange({ ...c, max: parseCampoNumero(e.target.value, c.max) })}
             className="input mt-0.5"
           />
         </label>
@@ -56,7 +62,7 @@ function CriterioEditor({
           <input
             type="number"
             value={c.alvo}
-            onChange={(e) => onChange({ ...c, alvo: Number(e.target.value) })}
+            onChange={(e) => onChange({ ...c, alvo: parseCampoNumero(e.target.value, c.alvo) })}
             className="input mt-0.5"
           />
         </label>
@@ -159,7 +165,7 @@ export function ParametrosGeracao({
                 onChange={(e) =>
                   onChange({
                     ...config,
-                    regrasSequencia: { ...r, [key]: Number(e.target.value) },
+                    regrasSequencia: { ...r, [key]: parseCampoNumero(e.target.value, r[key]) },
                     perfilId: null,
                   })
                 }
@@ -178,7 +184,13 @@ export function ParametrosGeracao({
             min={0}
             max={100}
             value={config.scoreMinimo}
-            onChange={(e) => onChange({ ...config, scoreMinimo: Number(e.target.value), perfilId: null })}
+            onChange={(e) =>
+              onChange({
+                ...config,
+                scoreMinimo: Math.min(100, Math.max(0, parseCampoNumero(e.target.value, config.scoreMinimo))),
+                perfilId: null,
+              })
+            }
             className="input mt-1 max-w-[120px]"
           />
         </label>

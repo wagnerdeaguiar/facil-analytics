@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DezenasGrid, MatrizLotofacil } from '@/components/DezenasGrid';
 import { ParametrosGeracao } from '@/components/ParametrosGeracao';
 import {
@@ -71,6 +71,20 @@ export default function GeradorPage() {
   const [mostrarPrioridade, setMostrarPrioridade] = useState(false);
   const [modoPrioridade, setModoPrioridade] = useState<'fixa' | 'excluida'>('fixa');
   const [dezenasBase, setDezenasBase] = useState<Set<number>>(new Set());
+  const prefsInicializadas = useRef(false);
+
+  const persistirPrefs = useCallback(
+    (cfg: ConfigGeracaoUI, base: string, max: number, qtd: number, nums: NumerosPorAposta) => {
+      salvarGeradorPrefs({
+        config: cfg,
+        origemBase: base,
+        maxDezenasIguais: max,
+        quantidade: qtd,
+        numerosPorAposta: nums,
+      });
+    },
+    [],
+  );
 
   const aplicarPerfilPorId = useCallback(
     (id: PerfilId, soma?: number) => {
@@ -80,12 +94,18 @@ export default function GeradorPage() {
       setConfig(ui);
       setOrigemBase(base);
       setMaxIguais(perfil.maxDezenasIguais);
-      salvarGeradorPrefs({ config: ui, origemBase: base, maxDezenasIguais: perfil.maxDezenasIguais });
+      salvarGeradorPrefs({
+        config: ui,
+        origemBase: base,
+        maxDezenasIguais: perfil.maxDezenasIguais,
+        quantidade,
+        numerosPorAposta,
+      });
       setInfo(
         `Perfil "${perfil.nome}" aplicado · Base ${base} · Score mín. ${perfil.scoreMinimo} · Máx. iguais ${perfil.maxDezenasIguais}`,
       );
     },
-    [mediaSoma],
+    [mediaSoma, quantidade, numerosPorAposta],
   );
 
   const carregarDefaults = useCallback(() => {
@@ -101,17 +121,22 @@ export default function GeradorPage() {
         if (perfilIdValido(perfilUrl)) {
           aplicarPerfilPorId(perfilUrl, d.mediaSoma);
           setTab('parametros');
-        } else {
+          prefsInicializadas.current = true;
+        } else if (!prefsInicializadas.current) {
           const prefs = carregarGeradorPrefs();
           if (prefs) {
             setConfig(prefs.config);
             setOrigemBase(prefs.origemBase);
             setMaxIguais(prefs.maxDezenasIguais);
+            if (prefs.quantidade != null) setQuantidade(prefs.quantidade);
+            if (prefs.numerosPorAposta != null)
+              setNumerosPorAposta(prefs.numerosPorAposta as NumerosPorAposta);
           } else {
             const salvo = carregarConfigLocal();
             if (salvo) setConfig(salvo);
             else if (d.configPremium) setConfig(d.configPremium);
           }
+          prefsInicializadas.current = true;
         }
         if (d.ultimoConcurso) setUltimoConcurso(d.ultimoConcurso);
         if (!perfilIdValido(perfilUrl)) {
@@ -166,9 +191,17 @@ export default function GeradorPage() {
   }
 
   function salvarParametros() {
-    salvarGeradorPrefs({ config, origemBase, maxDezenasIguais: maxIguais });
+    persistirPrefs(config, origemBase, maxIguais, quantidade, numerosPorAposta);
     setInfo('Parâmetros salvos no navegador.');
   }
+
+  useEffect(() => {
+    if (!prefsInicializadas.current) return;
+    const timer = window.setTimeout(() => {
+      persistirPrefs(config, origemBase, maxIguais, quantidade, numerosPorAposta);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [config, origemBase, maxIguais, quantidade, numerosPorAposta, persistirPrefs]);
 
   function onConfigChange(nova: ConfigGeracaoUI) {
     setConfig(nova);
@@ -368,8 +401,9 @@ export default function GeradorPage() {
               ))}
             </div>
             <button type="button" onClick={salvarParametros} className="btn-secondary">
-              Salvar parâmetros
+              Salvar parâmetros agora
             </button>
+            <p className="text-xs text-slate-500">Alterações são salvas automaticamente neste navegador.</p>
           </article>
           <ParametrosGeracao config={config} onChange={onConfigChange} />
         </>
