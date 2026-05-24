@@ -17,6 +17,7 @@
     "db:seed-planos": "tsx prisma/seed-planos.ts",
     "db:seed-perfis": "tsx prisma/seed-perfis.ts",
     "cron:expirar-assinaturas": "tsx scripts/cron-expirar-assinaturas.ts",
+    "db:promote-admin": "tsx scripts/promote-admin.ts",
     "test": "tsx --test src/lib/lotofacil/__tests__/**/*.test.ts",
     "publicar": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/publicar.ps1",
     "postinstall": "prisma generate"

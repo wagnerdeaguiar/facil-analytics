@@ -1,3 +1,4 @@
+import { isAdminEmail } from '@/lib/auth-config';
 import { prisma } from '@/lib/db';
 import { hashPassword, normalizeEmail, validatePasswordStrength } from '@/lib/password';
 
@@ -39,11 +40,7 @@ export async function registerUserWithPassword(input: RegisterInput): Promise<Re
     };
   }
 
-  const adminEmails = (process.env.ADMIN_EMAIL ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  const isAdmin = adminEmails.includes(email);
+  const isAdmin = isAdminEmail(email);
   const passwordHash = await hashPassword(input.password);
 
   const user = existing

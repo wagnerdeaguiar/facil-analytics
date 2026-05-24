@@ -3,14 +3,9 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/db';
-import { getDevAuthEmail, isDevAuthEnabled, isGoogleAuthConfigured } from '@/lib/auth-config';
+import { getDevAuthEmail, isAdminEmail, isDevAuthEnabled, isGoogleAuthConfigured } from '@/lib/auth-config';
 import { getPlanoBySlug } from '@/lib/billing/plan-service';
 import { normalizeEmail, verifyPassword } from '@/lib/password';
-
-const adminEmails = (process.env.ADMIN_EMAIL ?? '')
-  .split(',')
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
 
 function buildProviders(): NonNullable<NextAuthOptions['providers']> {
   const providers: NonNullable<NextAuthOptions['providers']> = [];
@@ -37,7 +32,7 @@ function buildProviders(): NonNullable<NextAuthOptions['providers']> {
           const email = (credentials?.email || devEmail || '').trim().toLowerCase();
           if (!email) return null;
 
-          const isAdmin = adminEmails.includes(email);
+          const isAdmin = isAdminEmail(email);
           const premium = process.env.AUTH_DEV_PREMIUM === 'true';
           const subscriptionStatus = premium ? 'active' : 'free';
           const premiumPlano = premium ? await getPlanoBySlug('premium') : null;
@@ -193,7 +188,7 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user, account }) {
       if (!user.id) return;
-      const isAdmin = adminEmails.includes((user.email ?? '').toLowerCase());
+      const isAdmin = isAdminEmail(user.email ?? '');
       await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -215,7 +210,7 @@ export const authOptions: NextAuthOptions = {
       });
     },
     async createUser({ user }) {
-      const isAdmin = adminEmails.includes((user.email ?? '').toLowerCase());
+      const isAdmin = isAdminEmail(user.email ?? '');
       await prisma.user.update({
         where: { id: user.id },
         data: {

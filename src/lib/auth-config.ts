@@ -13,3 +13,15 @@ export function getDevAuthEmail(): string | null {
   const email = process.env.AUTH_DEV_EMAIL?.trim().toLowerCase();
   return email || null;
 }
+
+/** E-mails com acesso admin (separados por vírgula em ADMIN_EMAIL). */
+export function getAdminEmails(): string[] {
+  return (process.env.ADMIN_EMAIL ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function isAdminEmail(email: string): boolean {
+  return getAdminEmails().includes(email.trim().toLowerCase());
+}
