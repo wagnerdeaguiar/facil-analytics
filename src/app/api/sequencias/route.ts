@@ -1,4 +1,4 @@
-export { dynamic } from '@/lib/route-config';
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getConcursosOrdenados } from '@/lib/services/analytics';
