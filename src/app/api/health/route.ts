@@ -25,6 +25,7 @@ export async function GET() {
     asaasConfigured: isAsaasConfigured(),
     asaasEnv: process.env.ASAAS_ENV === 'production' ? 'production' : 'sandbox',
     webhookConfigured: Boolean(process.env.ASAAS_WEBHOOK_TOKEN?.trim()),
+    deployCommit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
     dbError,
     expectedPort: '3010',
   });

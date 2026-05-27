@@ -7,7 +7,10 @@ import {
   mapAsaasMetodo,
   mapAsaasPaymentStatus,
   atualizarClienteAsaas,
+  buscarClienteAsaasPorEmail,
+  buscarClienteAsaasPorReferencia,
 } from './asaas-client';
+import { cpfValido } from '@/lib/cpf';
 import { getPlanoById, getPlanoBySlug } from './plan-service';
 import { syncSubscriptionAccess } from './sync-access';
 import { cancelExistingAsaasSubscription } from './subscription-change';
@@ -33,6 +36,9 @@ async function ensureAsaasCustomer(userId: string) {
   const cpf = user.cpf?.replace(/\D/g, '');
   if (!cpf || cpf.length !== 11) {
     throw new Error('Cadastre seu CPF em Minha Conta antes de assinar.');
+  }
+  if (!cpfValido(cpf)) {
+    throw new Error('CPF inválido. Corrija em Minha Conta antes de assinar.');
   }
 
   const sub = await prisma.subscription.upsert({
@@ -63,20 +69,37 @@ async function ensureAsaasCustomer(userId: string) {
     }
   }
 
-  const customer = await criarClienteAsaas({
-    name: user.name ?? user.email.split('@')[0],
-    email: user.email,
-    cpfCnpj: cpf,
-    mobilePhone: user.telefone ?? undefined,
-    externalReference: `userId:${userId}`,
-  });
+  const ref = `userId:${userId}`;
+  const existente =
+    (await buscarClienteAsaasPorReferencia(ref).catch(() => null)) ??
+    (await buscarClienteAsaasPorEmail(user.email).catch(() => null));
+
+  let customerId: string;
+  if (existente) {
+    customerId = existente.id;
+    await atualizarClienteAsaas(customerId, {
+      name: user.name ?? user.email.split('@')[0],
+      email: user.email,
+      cpfCnpj: cpf,
+      mobilePhone: user.telefone ?? undefined,
+    }).catch(() => {});
+  } else {
+    const customer = await criarClienteAsaas({
+      name: user.name ?? user.email.split('@')[0],
+      email: user.email,
+      cpfCnpj: cpf,
+      mobilePhone: user.telefone ?? undefined,
+      externalReference: ref,
+    });
+    customerId = customer.id;
+  }
 
   await prisma.subscription.update({
     where: { userId },
-    data: { gatewayCustomerId: customer.id, gateway: 'asaas' },
+    data: { gatewayCustomerId: customerId, gateway: 'asaas' },
   });
 
-  return { user, customerId: customer.id, sub };
+  return { user, customerId, sub };
 }
 
 async function salvarPagamentoLocal(input: {
@@ -150,7 +173,7 @@ export async function createBillingCheckout(
 
   const asaasSub = await criarAssinaturaAsaas({
     customerId,
-    valor: plano.valor,
+    valor: Math.round(Number(plano.valor) * 100) / 100,
     descricao: `${plano.nome} — ${SITE_NAME}`,
     metodo,
     externalReference: `userId:${userId}|planoId:${plano.id}`,

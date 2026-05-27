@@ -7,6 +7,7 @@ import { listarPagamentosUsuario } from '@/lib/billing/faturamento-service';
 import { resolvePlanLimitsForUser } from '@/lib/billing/plan-service';
 import { syncAsaasCustomerForUser } from '@/lib/billing/sync-customer';
 import { isPremiumStatus } from '@/lib/subscription';
+import { cpfValido } from '@/lib/cpf';
 
 export async function GET() {
   const auth = await requireSession();
@@ -60,6 +61,9 @@ export async function PATCH(request: Request) {
 
   if (cpf && cpf.length !== 11) {
     return NextResponse.json({ error: 'CPF deve ter 11 dígitos.' }, { status: 400 });
+  }
+  if (cpf && !cpfValido(cpf)) {
+    return NextResponse.json({ error: 'CPF inválido. Verifique os números.' }, { status: 400 });
   }
 
   const user = await prisma.user.update({

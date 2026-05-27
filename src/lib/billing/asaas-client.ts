@@ -12,6 +12,17 @@ export function isAsaasConfigured() {
   return Boolean(process.env.ASAAS_API_KEY);
 }
 
+function formatAsaasError(data: unknown, status: number): string {
+  const errors = (data as { errors?: { code?: string; description?: string }[] })?.errors;
+  if (errors?.length) {
+    const parts = errors.map((e) => e.description || e.code).filter(Boolean);
+    return parts.join(' — ');
+  }
+  const message = (data as { message?: string }).message;
+  if (message) return message;
+  return `Erro Asaas (${status})`;
+}
+
 async function asaasFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -31,11 +42,7 @@ async function asaasFetch<T>(
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg =
-      (data as { errors?: { description?: string }[] }).errors?.[0]?.description ??
-      (data as { message?: string }).message ??
-      `Erro Asaas ${res.status}`;
-    throw new Error(msg);
+    throw new Error(formatAsaasError(data, res.status));
   }
   return data as T;
 }
@@ -118,6 +125,20 @@ export async function criarClienteAsaas(input: {
 
 export async function buscarClienteAsaas(id: string) {
   return asaasFetch<AsaasCustomer>(`/customers/${id}`);
+}
+
+export async function buscarClienteAsaasPorEmail(email: string) {
+  const data = await asaasFetch<{ data: AsaasCustomer[] }>(
+    `/customers?email=${encodeURIComponent(email)}&limit=1`,
+  );
+  return data.data?.[0] ?? null;
+}
+
+export async function buscarClienteAsaasPorReferencia(externalReference: string) {
+  const data = await asaasFetch<{ data: AsaasCustomer[] }>(
+    `/customers?externalReference=${encodeURIComponent(externalReference)}&limit=1`,
+  );
+  return data.data?.[0] ?? null;
 }
 
 export async function atualizarClienteAsaas(

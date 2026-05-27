@@ -117,9 +117,11 @@ export default function PrecosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planoId, metodo }),
       });
-      const data = (await res.json()) as CheckoutResponse;
+      const data = (await res.json()) as CheckoutResponse & { error?: string };
       if (!res.ok) {
-        setErro(data.error ?? 'Erro ao iniciar assinatura. Cadastre CPF em Minha Conta.');
+        const msg = data.error ?? 'Erro ao iniciar assinatura. Cadastre CPF em Minha Conta.';
+        console.error('[checkout]', res.status, msg);
+        setErro(msg);
         return;
       }
       setCheckout(data);
