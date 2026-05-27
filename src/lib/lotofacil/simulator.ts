@@ -13,11 +13,46 @@ export interface ResultadoSimulacaoJogo {
   totalTestes: number;
 }
 
+export interface FaixaAcertosPercentual {
+  acertos: number;
+  quantidade: number;
+  percentual: number;
+}
+
 export interface ResultadoSimulacaoGeral {
   porJogo: ResultadoSimulacaoJogo[];
   ranking: ResultadoSimulacaoJogo[];
   totais: Record<number, number>;
+  /** Total de comparações jogo × concurso */
+  totalComparacoes: number;
+  /** % sobre o total de comparações (faixas 1–5 acertos) */
+  percentuaisBaixos: FaixaAcertosPercentual[];
+  /** % sobre o total de comparações (faixas 11–15 — prêmio Lotofácil) */
+  percentuaisPremio: FaixaAcertosPercentual[];
   melhorPorConcurso: Array<{ concurso: number; melhorAcertos: number; dezenas?: number[] }>;
+}
+
+const FAIXAS_BAIXAS = [1, 2, 3, 4, 5] as const;
+const FAIXAS_PREMIO = [11, 12, 13, 14, 15] as const;
+
+function criarDistribuicaoVazia(): Record<number, number> {
+  const dist: Record<number, number> = {};
+  for (let i = 0; i <= 15; i++) dist[i] = 0;
+  return dist;
+}
+
+export function calcularPercentuaisFaixas(
+  totais: Record<number, number>,
+  totalComparacoes: number,
+  faixas: readonly number[],
+): FaixaAcertosPercentual[] {
+  return faixas.map((acertos) => {
+    const quantidade = totais[acertos] ?? 0;
+    const percentual = totalComparacoes
+      ? Math.round((quantidade / totalComparacoes) * 10000) / 100
+      : 0;
+    return { acertos, quantidade, percentual };
+  });
 }
 
 export function simularJogos(
@@ -34,17 +69,18 @@ export function simularJogos(
     })
     .sort((a, b) => a.numeroConcurso - b.numeroConcurso);
 
-  const totais: Record<number, number> = { 11: 0, 12: 0, 13: 0, 14: 0, 15: 0 };
+  const totais = criarDistribuicaoVazia();
   const porJogo: ResultadoSimulacaoJogo[] = [];
+  const totalComparacoes = jogos.length * filtrados.length;
 
   for (const jogo of jogos) {
-    const dist: Record<number, number> = { 11: 0, 12: 0, 13: 0, 14: 0, 15: 0 };
+    const dist = criarDistribuicaoVazia();
     let melhorAcerto = 0;
     let melhorConcurso = 0;
 
     for (const c of filtrados) {
       const acertos = contarAcertos(jogo.dezenas, c.dezenas);
-      if (acertos >= 11 && acertos <= 15) {
+      if (acertos >= 0 && acertos <= 15) {
         dist[acertos]++;
         totais[acertos]++;
       }
@@ -90,6 +126,17 @@ export function simularJogos(
     return { concurso: c.numeroConcurso, melhorAcertos: melhor, dezenas };
   });
 
-  return { porJogo, ranking, totais, melhorPorConcurso };
+  const percentuaisBaixos = calcularPercentuaisFaixas(totais, totalComparacoes, FAIXAS_BAIXAS);
+  const percentuaisPremio = calcularPercentuaisFaixas(totais, totalComparacoes, FAIXAS_PREMIO);
+
+  return {
+    porJogo,
+    ranking,
+    totais,
+    totalComparacoes,
+    percentuaisBaixos,
+    percentuaisPremio,
+    melhorPorConcurso,
+  };
 }
 

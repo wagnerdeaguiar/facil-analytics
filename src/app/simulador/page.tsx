@@ -17,6 +17,9 @@ export default function SimuladorPage() {
   const [fim, setFim] = useState('');
   const [resultado, setResultado] = useState<{
     totais: Record<string, number>;
+    totalComparacoes?: number;
+    percentuaisBaixos?: { acertos: number; quantidade: number; percentual: number }[];
+    percentuaisPremio?: { acertos: number; quantidade: number; percentual: number }[];
     ranking: { dezenas: number[]; melhorAcerto: number; distribuicao: Record<string, number> }[];
     analiseCriterios?: {
       jogosAnalisados: number;
@@ -60,9 +63,21 @@ export default function SimuladorPage() {
     if (raw) setTexto(raw);
   }
 
-  const chartData = resultado
-    ? Object.entries(resultado.totais).map(([k, v]) => ({ acertos: `${k} pts`, qtd: v }))
-    : [];
+  const chartDataPremio = resultado?.percentuaisPremio?.length
+    ? resultado.percentuaisPremio.map((f) => ({
+        acertos: `${f.acertos} pts`,
+        qtd: f.quantidade,
+        pct: f.percentual,
+      }))
+    : resultado
+      ? [11, 12, 13, 14, 15].map((k) => ({
+          acertos: `${k} pts`,
+          qtd: resultado.totais[String(k)] ?? 0,
+          pct: resultado.totalComparacoes
+            ? Math.round(((resultado.totais[String(k)] ?? 0) / resultado.totalComparacoes) * 10000) / 100
+            : 0,
+        }))
+      : [];
 
   return (
     <section className="space-y-6">
@@ -109,17 +124,59 @@ export default function SimuladorPage() {
 
       {resultado && (
         <>
+          {resultado.percentuaisBaixos && resultado.percentuaisBaixos.length > 0 && (
+            <article className="card overflow-x-auto">
+              <h2 className="mb-1 text-sm font-semibold">Percentual por faixa de acertos (1 a 5)</h2>
+              <p className="mb-3 text-xs text-slate-500">
+                {resultado.totalComparacoes?.toLocaleString('pt-BR')} comparações jogo × concurso no período
+                selecionado.
+              </p>
+              <table className="w-full text-left text-sm">
+                <thead className="text-slate-400">
+                  <tr>
+                    <th className="pb-2">Acertos</th>
+                    <th>Ocorrências</th>
+                    <th>% do total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resultado.percentuaisBaixos.map((f) => (
+                    <tr key={f.acertos} className="border-t border-slate-700/50">
+                      <td className="py-1.5 font-medium text-slate-200">{f.acertos}</td>
+                      <td>{f.quantidade.toLocaleString('pt-BR')}</td>
+                      <td className="text-brand-300">{f.percentual}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </article>
+          )}
+
           <article className="card h-64">
-            <h2 className="mb-2 text-sm font-semibold">Distribuição de acertos (todos os jogos)</h2>
+            <h2 className="mb-2 text-sm font-semibold">Faixas de prêmio (11 a 15 acertos)</h2>
             <ResponsiveContainer width="100%" height="90%">
-              <BarChart data={chartData}>
+              <BarChart data={chartDataPremio}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="acertos" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
-                <Tooltip />
+                <Tooltip
+                  formatter={(v: number, _n, p) => {
+                    const row = p?.payload as { pct?: number };
+                    return [`${v} (${row?.pct ?? 0}%)`, 'Ocorrências'];
+                  }}
+                />
                 <Bar dataKey="qtd" fill="#10b981" />
               </BarChart>
             </ResponsiveContainer>
+            {resultado.percentuaisPremio && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+                {resultado.percentuaisPremio.map((f) => (
+                  <span key={f.acertos} className="rounded bg-slate-800 px-2 py-1">
+                    {f.acertos} pts: <strong className="text-brand-300">{f.percentual}%</strong>
+                  </span>
+                ))}
+              </div>
+            )}
           </article>
 
           {resultado.analiseCriterios && resultado.analiseCriterios.criterios.length > 0 && (
