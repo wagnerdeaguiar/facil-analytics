@@ -9,7 +9,19 @@ export function getAsaasBaseUrl() {
 }
 
 export function isAsaasConfigured() {
-  return Boolean(process.env.ASAAS_API_KEY);
+  return Boolean(process.env.ASAAS_API_KEY?.trim());
+}
+
+/** Detecta chave sandbox em produção (ou o contrário) antes de chamar a API. */
+export function getAsaasKeyDiagnostics() {
+  const key = process.env.ASAAS_API_KEY?.trim() ?? '';
+  const env = process.env.ASAAS_ENV === 'production' ? 'production' : 'sandbox';
+  const isProdKey = key.startsWith('$aact_prod_');
+  const isSandboxKey = key.startsWith('$aact_hmlg_');
+  const keyType = isProdKey ? 'production' : isSandboxKey ? 'sandbox' : 'unknown';
+  const envMismatch =
+    (env === 'production' && isSandboxKey) || (env === 'sandbox' && isProdKey);
+  return { env, keyType, envMismatch, hasKey: key.length > 0 };
 }
 
 function formatAsaasError(data: unknown, status: number): string {

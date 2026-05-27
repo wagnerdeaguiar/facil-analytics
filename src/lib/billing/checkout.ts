@@ -9,6 +9,7 @@ import {
   atualizarClienteAsaas,
   buscarClienteAsaasPorEmail,
   buscarClienteAsaasPorReferencia,
+  getAsaasKeyDiagnostics,
 } from './asaas-client';
 import { cpfValido } from '@/lib/cpf';
 import { getPlanoById, getPlanoBySlug } from './plan-service';
@@ -159,6 +160,13 @@ export async function createBillingCheckout(
 
   if (!isAsaasConfigured()) {
     throw new Error('Gateway Asaas não configurado. Defina ASAAS_API_KEY na Vercel.');
+  }
+
+  const { envMismatch, keyType, env } = getAsaasKeyDiagnostics();
+  if (envMismatch) {
+    throw new Error(
+      `Chave Asaas (${keyType}) não combina com ASAAS_ENV=${env}. Use chave de produção ($aact_prod_) com ASAAS_ENV=production na Vercel.`,
+    );
   }
 
   if (metodo === 'credit_card') {

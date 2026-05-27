@@ -29,9 +29,11 @@ Contato oficial: **contato@sortefacil.pro**
 | `ADMIN_EMAIL` | `contato@sortefacil.pro` |
 | `AUTH_DEV_MODE` | `false` |
 | `AUTH_DEV_PREMIUM` | `false` |
-| `ASAAS_API_KEY` | Chave API Asaas **produção** |
+| `ASAAS_API_KEY` | Chave API Asaas **produção** (começa com `$aact_prod_`) |
 | `ASAAS_WEBHOOK_TOKEN` | Token definido no webhook Asaas |
 | `ASAAS_ENV` | `production` |
+
+**Asaas — erro “chave inválida”:** gere uma chave nova em [Asaas → Integrações → API](https://www.asaas.com/customerConfigIntegrations), cole em **Vercel → Settings → Environment Variables → Production** (sem aspas nem espaços no início/fim), confira `ASAAS_ENV=production`, salve e faça **Redeploy**. `/api/health` deve retornar `asaasApiOk: true`.
 | `CRON_SECRET` | String aleatória (Vercel Cron envia `Authorization: Bearer …`) |
 
 Template local: `.env.vercel.template`
