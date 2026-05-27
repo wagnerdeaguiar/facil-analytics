@@ -1,7 +1,8 @@
 import type { MetodoPagamento } from './types';
 
-const SANDBOX_URL = 'https://sandbox.asaas.com/api/v3';
-const PRODUCTION_URL = 'https://api.asaas.com/api/v3';
+/** URLs oficiais: https://docs.asaas.com/docs/authentication-2 */
+const SANDBOX_URL = 'https://api-sandbox.asaas.com/v3';
+const PRODUCTION_URL = 'https://api.asaas.com/v3';
 
 export function getAsaasBaseUrl() {
   return process.env.ASAAS_ENV === 'production' ? PRODUCTION_URL : SANDBOX_URL;
@@ -22,6 +23,7 @@ async function asaasFetch<T>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'User-Agent': 'sortefacil-pro',
       access_token: key,
       ...(options.headers ?? {}),
     },

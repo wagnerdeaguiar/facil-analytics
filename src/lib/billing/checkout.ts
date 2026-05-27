@@ -42,15 +42,25 @@ async function ensureAsaasCustomer(userId: string) {
   });
 
   if (sub.gatewayCustomerId && sub.gateway === 'asaas') {
-    await atualizarClienteAsaas(sub.gatewayCustomerId, {
-      name: user.name ?? user.email.split('@')[0],
-      email: user.email,
-      cpfCnpj: cpf,
-      mobilePhone: user.telefone ?? undefined,
-    }).catch(() => {
-      /* cliente pode estar desatualizado no Asaas — segue com id existente */
-    });
-    return { user, customerId: sub.gatewayCustomerId, sub };
+    try {
+      await atualizarClienteAsaas(sub.gatewayCustomerId, {
+        name: user.name ?? user.email.split('@')[0],
+        email: user.email,
+        cpfCnpj: cpf,
+        mobilePhone: user.telefone ?? undefined,
+      });
+      return { user, customerId: sub.gatewayCustomerId, sub };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      const clienteInexistente =
+        msg.includes('404') || /não encontrad|not found/i.test(msg);
+      if (!clienteInexistente) throw e;
+      /* ID de sandbox/outra conta — recria cliente em produção */
+      await prisma.subscription.update({
+        where: { userId },
+        data: { gatewayCustomerId: null, gatewaySubscriptionId: null },
+      });
+    }
   }
 
   const customer = await criarClienteAsaas({
