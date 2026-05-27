@@ -2,23 +2,28 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { isDevAuthEnabled } from '@/lib/auth-config';
-import {
-  getAsaasKeyDiagnostics,
-  isAsaasConfigured,
-  testarConexaoAsaas,
-} from '@/lib/billing/asaas-client';
+import { isAsaasConfigured, testarConexaoAsaas, getAsaasKeyDiagnostics } from '@/lib/billing/asaas-client';
 
-export async function GET() {
+export async function GET(request: Request) {
   let database = false;
   let concursos = 0;
-  let dbError: string | undefined;
 
   try {
     concursos = await prisma.concurso.count();
     database = true;
-  } catch (e) {
-    dbError = e instanceof Error ? e.message : 'Erro de conexão';
+  } catch {
+    database = false;
+  }
+
+  const publicPayload = {
+    ok: database,
+    database,
+    deployCommit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
+  };
+
+  const detailed = new URL(request.url).searchParams.get('detailed') === '1';
+  if (!detailed) {
+    return NextResponse.json(publicPayload);
   }
 
   const asaasKey = getAsaasKeyDiagnostics();
@@ -37,10 +42,8 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    ok: database && (!isAsaasConfigured() || asaasApiOk),
-    database,
+    ...publicPayload,
     concursos,
-    devAuth: isDevAuthEnabled(),
     asaasConfigured: isAsaasConfigured(),
     asaasApiOk,
     asaasApiError,
@@ -48,8 +51,5 @@ export async function GET() {
     asaasEnvMismatch: asaasKey.envMismatch,
     asaasEnv: asaasKey.env,
     webhookConfigured: Boolean(process.env.ASAAS_WEBHOOK_TOKEN?.trim()),
-    deployCommit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
-    dbError,
-    expectedPort: '3010',
   });
 }

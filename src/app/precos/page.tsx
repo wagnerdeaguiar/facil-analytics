@@ -53,6 +53,11 @@ export default function PrecosPage() {
 
   const verificarPagamento = useCallback(async () => {
     const res = await fetch('/api/billing/sync', { method: 'POST' });
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string };
+      setErro(err.error ?? 'Não foi possível verificar o pagamento. Tente entrar de novo.');
+      return false;
+    }
     const data = (await res.json()) as BillingStatusResponse & { ok?: boolean };
     if (data.premium) {
       setPremiumAtivado(true);

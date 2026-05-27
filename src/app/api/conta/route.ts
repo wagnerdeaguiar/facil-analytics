@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { listarPagamentosUsuario } from '@/lib/billing/faturamento-service';
 import { resolvePlanLimitsForUser } from '@/lib/billing/plan-service';
 import { syncAsaasCustomerForUser } from '@/lib/billing/sync-customer';
+import { cancelExistingAsaasSubscription } from '@/lib/billing/subscription-change';
 import { isPremiumStatus } from '@/lib/subscription';
 import { cpfValido } from '@/lib/cpf';
 
@@ -86,4 +87,42 @@ export async function PATCH(request: Request) {
   });
 
   return NextResponse.json({ ok: true, cpf: user.cpf, telefone: user.telefone });
+}
+
+/** Exclusão de conta (LGPD). Corpo: { "confirm": "EXCLUIR" } */
+export async function DELETE(request: Request) {
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+  const session = auth.session;
+
+  if (session.user.role === 'admin') {
+    return NextResponse.json(
+      { error: 'Conta administrador não pode ser excluída por este fluxo.' },
+      { status: 403 },
+    );
+  }
+
+  const body = await request.json().catch(() => ({}));
+  if (body.confirm !== 'EXCLUIR') {
+    return NextResponse.json(
+      { error: 'Confirme a exclusão enviando { "confirm": "EXCLUIR" } no corpo da requisição.' },
+      { status: 400 },
+    );
+  }
+
+  const userId = session.user.id;
+
+  await cancelExistingAsaasSubscription(userId).catch(() => {});
+
+  await prisma.auditLog.create({
+    data: {
+      userId,
+      eventType: 'account_deleted',
+      description: 'Exclusão de conta solicitada pelo titular (LGPD)',
+    },
+  });
+
+  await prisma.user.delete({ where: { id: userId } });
+
+  return NextResponse.json({ ok: true, message: 'Conta e dados associados foram excluídos.' });
 }

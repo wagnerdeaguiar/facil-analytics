@@ -110,7 +110,12 @@ export async function syncUserBillingFromAsaas(userId: string): Promise<BillingS
   }
 
   const paidPayment = latestPayments.find((p) => isAsaasPaymentPaid(p.status));
-  if (paidPayment && !isPremiumStatus(sub.status)) {
+  const podeAtivarPorSync =
+    paidPayment &&
+    !isPremiumStatus(sub.status) &&
+    (sub.status === 'pending' || sub.status === 'past_due');
+
+  if (podeAtivarPorSync) {
     await activatePremiumFromAsaasPayment(userId, paidPayment);
     synced = true;
   }

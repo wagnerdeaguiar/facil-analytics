@@ -11,9 +11,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     console.error('[asaas webhook]', e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Webhook error' },
-      { status: 400 },
-    );
+    const msg = e instanceof Error ? e.message : 'Webhook error';
+    const isAuth = /token|webhook|autentica/i.test(msg);
+    return NextResponse.json({ error: msg }, { status: isAuth ? 401 : 400 });
   }
 }

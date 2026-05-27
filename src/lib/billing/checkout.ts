@@ -175,6 +175,19 @@ export async function createBillingCheckout(
     );
   }
 
+  const subAtual = await prisma.subscription.findUnique({ where: { userId } });
+  if (subAtual?.status === 'pending') {
+    const cobrancaPendente = await prisma.payment.findFirst({
+      where: { userId, status: { in: ['pending', 'overdue'] } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (cobrancaPendente) {
+      throw new Error(
+        'Você já tem uma cobrança pendente. Aguarde a confirmação ou use "Já paguei" na tela de pagamento.',
+      );
+    }
+  }
+
   await cancelExistingAsaasSubscription(userId);
 
   const { customerId } = await ensureAsaasCustomer(userId);

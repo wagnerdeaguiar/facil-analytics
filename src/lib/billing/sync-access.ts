@@ -6,16 +6,17 @@ export interface SyncAccessInput {
   userId: string;
   status: SubscriptionStatus;
   planoSlug?: string;
-  planoId?: string;
+  planoId?: string | null;
   valor?: number;
   periodicidade?: string;
   gateway?: string;
   gatewayCustomerId?: string;
-  gatewaySubscriptionId?: string;
+  gatewaySubscriptionId?: string | null;
   dataInicio?: Date;
   dataRenovacao?: Date;
   currentPeriodEnd?: Date;
   dataCancelamento?: Date | null;
+  gracePeriodUntil?: Date | null;
 }
 
 /** Atualiza Subscription + User.subscriptionStatus de forma consistente. */
@@ -34,6 +35,7 @@ export async function syncSubscriptionAccess(input: SyncAccessInput) {
     dataRenovacao,
     currentPeriodEnd,
     dataCancelamento,
+    gracePeriodUntil,
   } = input;
 
   await prisma.subscription.upsert({
@@ -52,6 +54,7 @@ export async function syncSubscriptionAccess(input: SyncAccessInput) {
       dataRenovacao,
       currentPeriodEnd,
       dataCancelamento,
+      gracePeriodUntil,
     },
     update: {
       status,
@@ -66,6 +69,7 @@ export async function syncSubscriptionAccess(input: SyncAccessInput) {
       ...(dataRenovacao !== undefined ? { dataRenovacao } : {}),
       ...(currentPeriodEnd !== undefined ? { currentPeriodEnd } : {}),
       ...(dataCancelamento !== undefined ? { dataCancelamento } : {}),
+      ...(gracePeriodUntil !== undefined ? { gracePeriodUntil } : {}),
     },
   });
 
@@ -83,10 +87,17 @@ export async function lockUserToFree(userId: string, reason: string) {
     userId,
     status: 'free',
     planoSlug: 'free',
-    planoId: undefined,
+    planoId: null,
     valor: 0,
     periodicidade: 'none',
+    gatewaySubscriptionId: null,
     dataCancelamento: new Date(),
+    gracePeriodUntil: null,
+  });
+
+  await prisma.subscription.update({
+    where: { userId },
+    data: { planoId: null, gatewaySubscriptionId: null },
   });
 
   await prisma.auditLog.create({

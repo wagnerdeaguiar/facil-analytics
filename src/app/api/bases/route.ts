@@ -1,7 +1,7 @@
 export { dynamic } from '@/lib/route-config';
 
 import { NextResponse } from 'next/server';
-import { requirePremium } from '@/lib/api-auth';
+import { requireAdmin } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { getConcursosOrdenados } from '@/lib/services/analytics';
 import { extrairDezenasConcurso } from '@/lib/lotofacil/metrics';
@@ -75,7 +75,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const auth = await requirePremium();
+  const auth = await requireAdmin();
   if (auth.response) return auth.response;
 
   try {
