@@ -4,8 +4,15 @@ import type { MetodoPagamento } from './types';
 const SANDBOX_URL = 'https://api-sandbox.asaas.com/v3';
 const PRODUCTION_URL = 'https://api.asaas.com/v3';
 
+/** Aceita production, producao, produção (evita typo comum na Vercel). */
+export function normalizeAsaasEnv(): 'production' | 'sandbox' {
+  const raw = (process.env.ASAAS_ENV ?? '').trim().toLowerCase();
+  if (raw === 'production' || raw === 'producao' || raw === 'produção') return 'production';
+  return 'sandbox';
+}
+
 export function getAsaasBaseUrl() {
-  return process.env.ASAAS_ENV === 'production' ? PRODUCTION_URL : SANDBOX_URL;
+  return normalizeAsaasEnv() === 'production' ? PRODUCTION_URL : SANDBOX_URL;
 }
 
 export function isAsaasConfigured() {
@@ -15,13 +22,26 @@ export function isAsaasConfigured() {
 /** Detecta chave sandbox em produção (ou o contrário) antes de chamar a API. */
 export function getAsaasKeyDiagnostics() {
   const key = process.env.ASAAS_API_KEY?.trim() ?? '';
-  const env = process.env.ASAAS_ENV === 'production' ? 'production' : 'sandbox';
+  const env = normalizeAsaasEnv();
+  const rawEnv = process.env.ASAAS_ENV?.trim() ?? '';
   const isProdKey = key.startsWith('$aact_prod_');
   const isSandboxKey = key.startsWith('$aact_hmlg_');
   const keyType = isProdKey ? 'production' : isSandboxKey ? 'sandbox' : 'unknown';
   const envMismatch =
     (env === 'production' && isSandboxKey) || (env === 'sandbox' && isProdKey);
-  return { env, keyType, envMismatch, hasKey: key.length > 0 };
+  const keyPrefixHint = key.length
+    ? key.startsWith('$aact_')
+      ? key.slice(0, 12) + '…'
+      : `formato inválido (começa com "${key.slice(0, 8)}…")`
+    : 'vazia';
+  return {
+    env,
+    rawEnv: rawEnv || null,
+    keyType,
+    envMismatch,
+    hasKey: key.length > 0,
+    keyPrefixHint,
+  };
 }
 
 function formatAsaasError(data: unknown, status: number): string {
@@ -178,7 +198,7 @@ export async function testarConexaoAsaas() {
   await asaasFetch<{ totalCount?: number }>('/customers?limit=1');
   return {
     ok: true,
-    env: process.env.ASAAS_ENV === 'production' ? 'production' : 'sandbox',
+    env: normalizeAsaasEnv(),
     baseUrl: getAsaasBaseUrl(),
   };
 }

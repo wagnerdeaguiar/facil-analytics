@@ -48,8 +48,10 @@ export async function GET(request: Request) {
     asaasApiOk,
     asaasApiError,
     asaasKeyType: asaasKey.keyType,
+    asaasKeyPrefixHint: asaasKey.keyPrefixHint,
     asaasEnvMismatch: asaasKey.envMismatch,
     asaasEnv: asaasKey.env,
+    asaasEnvRaw: asaasKey.rawEnv,
     webhookConfigured: Boolean(process.env.ASAAS_WEBHOOK_TOKEN?.trim()),
   });
 }
